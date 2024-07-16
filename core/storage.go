@@ -1,12 +1,21 @@
 package core
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
 )
 
-type TransformPathFunc func(string) (string, error)
+type TransformPathFunc func(string) (string, string)
+
+func DefaultTransformPathFunc(key string) (prefix string, name string) {
+    fullHash := sha1.Sum([]byte(key))
+    strHash := hex.EncodeToString(fullHash[:])
+    prefix, name = strHash[:2], strHash[2:]
+    return
+}
 
 type Storage struct {
 	baseDir       string
@@ -32,16 +41,14 @@ func (s *Storage) Read(key string) {
 }
 
 func (s *Storage) Write(key string, r io.Reader) error {
-    pathKey, err := s.transformPath(key)
-    if err != nil {
+    prefix, filename := s.transformPath(key)
+
+    prefixPath := fmt.Sprintf("%s/%s", s.baseDir, prefix)
+    if err := os.MkdirAll(prefixPath, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
         return err
     }
 
-    fullPath := fmt.Sprintf("%s/%s", s.baseDir, pathKey)
-    if err = os.MkdirAll(fullPath, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
-        return err
-    }
-
+    fullPath := fmt.Sprintf("%s/%s/%s", s.baseDir, prefix, filename)
     f, err := os.Create(fullPath)
     if err != nil {
         return err
