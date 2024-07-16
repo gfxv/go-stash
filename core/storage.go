@@ -1,8 +1,10 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,10 +12,10 @@ import (
 
 type TransformPathFunc func(string) (string, string)
 
-func DefaultTransformPathFunc(key string) (prefix string, name string) {
+func DefaultTransformPathFunc(key string) (prefix string, parent string) {
     fullHash := sha1.Sum([]byte(key))
     strHash := hex.EncodeToString(fullHash[:])
-    prefix, name = strHash[:2], strHash[2:]
+    prefix, parent = strHash[:5], strHash[5:]
     return
 }
 
@@ -36,31 +38,47 @@ func (s *Storage) WithTransformPathFunc(pathFunc TransformPathFunc) *Storage {
 	return s
 }
 
+func (s *Storage) Has(path string) bool {
+    _, err := os.Stat(path)
+    return !errors.Is(err, os.ErrNotExist)
+}
+
 func (s *Storage) Read(key string) {
 
 }
 
-func (s *Storage) Write(key string, r io.Reader) error {
-    prefix, filename := s.transformPath(key)
+func (s *Storage) Write(key string, data []byte) error {
+    prefix, parent := s.transformPath(key)
 
-    prefixPath := fmt.Sprintf("%s/%s", s.baseDir, prefix)
-    if err := os.MkdirAll(prefixPath, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
+    folders := fmt.Sprintf("%s/%s/%s", s.baseDir, prefix, parent)
+    if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
         return err
     }
 
-    fullPath := fmt.Sprintf("%s/%s/%s", s.baseDir, prefix, filename)
+    contentPath := buildContentPath(data) 
+    fullPath := fmt.Sprintf("%s/%s/%s/%s", s.baseDir, prefix, parent, contentPath)
+
+    if s.Has(fullPath) {
+        return fmt.Errorf("collision detected! \nkey '%s' with data provided already exists", key)
+    }
+
     f, err := os.Create(fullPath)
     if err != nil {
         return err
     }
-    
+
     // Copy() returns (written, err), written is ignored
-    _, err = io.Copy(f, r)
+    _, err = io.Copy(f, bytes.NewReader(data))
     if err != nil {
         return err
     }
 
     return nil
+}
+
+func buildContentPath(data []byte) string {
+    fileHash := sha1.Sum(data)
+    return hex.EncodeToString(fileHash[:])
 }
 
 func (s *Storage) Delete() {}
