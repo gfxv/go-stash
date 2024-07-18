@@ -10,18 +10,20 @@ import (
 	"os"
 )
 
-type TransformPathFunc func(string) (string, string)
+type TransformPathFunc func([]byte) (string, string)
 
-func DefaultTransformPathFunc(key string) (prefix string, parent string) {
-    fullHash := sha1.Sum([]byte(key))
+func DefaultTransformPathFunc(data []byte) (prefix string, filename string) {
+    fullHash := sha1.Sum(data)
     strHash := hex.EncodeToString(fullHash[:])
-    prefix, parent = strHash[:5], strHash[5:]
+    prefix, filename = strHash[:5], strHash[5:]
     return
 }
 
 type Storage struct {
 	baseDir       string
 	transformPath TransformPathFunc
+    pack          PackFunc
+    unpack        UnpackFunc
 }
 
 func NewDefaultStorage() *Storage {
@@ -38,37 +40,43 @@ func (s *Storage) WithTransformPathFunc(pathFunc TransformPathFunc) *Storage {
 	return s
 }
 
+func (s *Storage) WithCompressionFuncs(compress PackFunc, decompress UnpackFunc) *Storage {
+    s.pack = compress
+    s.unpack = decompress
+    return s
+}
+
 func (s *Storage) Has(path string) bool {
     _, err := os.Stat(path)
     return !errors.Is(err, os.ErrNotExist)
 }
 
 func (s *Storage) Read(key string) {
-
 }
 
+// TODO: save key to db 
 func (s *Storage) Write(key string, data []byte) error {
-    prefix, parent := s.transformPath(key)
+    prefix, filename := s.transformPath(data)
 
-    folders := fmt.Sprintf("%s/%s/%s", s.baseDir, prefix, parent)
+    folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
     if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
         return err
     }
 
-    contentPath := buildContentPath(data) 
-    fullPath := fmt.Sprintf("%s/%s/%s/%s", s.baseDir, prefix, parent, contentPath)
+    fullPath := fmt.Sprintf("%s/%s", folders, filename)
 
     if s.Has(fullPath) {
         return fmt.Errorf("collision detected! \nkey '%s' with data provided already exists", key)
     }
 
-    f, err := os.Create(fullPath)
+    file, err := os.Create(fullPath)
     if err != nil {
         return err
     }
 
-    // Copy() returns (written, err), written is ignored
-    _, err = io.Copy(f, bytes.NewReader(data))
+    // write compressed data to storage
+    compressed := s.pack(data)
+    _, err = io.Copy(file, bytes.NewReader(compressed))
     if err != nil {
         return err
     }
@@ -76,10 +84,6 @@ func (s *Storage) Write(key string, data []byte) error {
     return nil
 }
 
-func buildContentPath(data []byte) string {
-    fileHash := sha1.Sum(data)
-    return hex.EncodeToString(fileHash[:])
-}
 
 func (s *Storage) Delete() {}
 
