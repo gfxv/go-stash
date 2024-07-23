@@ -20,8 +20,8 @@ func DefaultTransformPathFunc(data []byte) (prefix string, filename string) {
 }
 
 type Storage struct {
-	baseDir       string
-	transformPath TransformPathFunc
+    baseDir       string
+    transformPath TransformPathFunc
     pack          PackFunc
     unpack        UnpackFunc
 }
@@ -51,10 +51,44 @@ func (s *Storage) Has(path string) bool {
     return !errors.Is(err, os.ErrNotExist)
 }
 
+
+// Store receives path (or multiple paths) to file or directory that should be saved on the disk
+func (s *Storage) Store(key string, paths ...string) error {
+    var err error
+    for _, p := range paths {
+        tree, err := NewFileTree(p)
+        if err != nil {
+            return err
+        }
+        err = s.saveTree(key, *tree)
+    }
+    return err
+}
+
+func (s *Storage) saveTree(key string, tree ...File) error {
+    var err error
+    for _, t := range tree {
+        if t.IsDir {
+            s.saveTree(key, t.Children...)
+        }
+        err = s.writeFile(key, t.FullPath)
+    }
+    return err
+}
+
+func (s *Storage) writeFile(key, path string) error {
+    file, err := os.ReadFile(path)
+    if err != nil {
+        return err
+    }
+    return s.Write(key, file)
+}
+
 func (s *Storage) Read(key string) {
 }
 
 // TODO: save key to db 
+// Write 
 func (s *Storage) Write(key string, data []byte) error {
     prefix, filename := s.transformPath(data)
 
