@@ -53,3 +53,13 @@ func NewFileTree(root string) (result *File, err error) {
     return
 }
 
+// IsDir reports whether path describes a directory.
+// Returns err if path does not exist
+func isDir(path string) (bool, error) {
+    f, err := os.Stat(path) 
+    if err != nil {
+        return false, err
+    }
+
+    return f.IsDir(), nil
+}
