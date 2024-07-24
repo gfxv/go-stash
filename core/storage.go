@@ -89,11 +89,11 @@ func (s *Storage) saveTree(key string, tree []string) error {
 func (s *Storage) Read(key string) {
 }
 
-// TODO: save key to db
-// write ..
+// write writes given data to the disk
 func (s *Storage) write(key string, data []byte) error {
 	prefix, filename := s.transformPath(data)
-	folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
+	trKey := transformKey(key)
+	folders := fmt.Sprintf("%s/%s/%s", s.baseDir, trKey, prefix)
 	if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
 		return err
 	}
