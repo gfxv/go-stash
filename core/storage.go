@@ -77,7 +77,11 @@ func (s *Storage) saveTree(key string, tree []string) error {
 		if err != nil {
 			return err
 		}
-		err = s.write(key, file)
+		// header = path + \0
+		// data = header + file content (in bytes)
+		header := fmt.Sprintf("%s\u0000", t)
+		data := append([]byte(header), file...)
+		err = s.write(key, data)
 	}
 	return err
 }
@@ -89,14 +93,12 @@ func (s *Storage) Read(key string) {
 // write ..
 func (s *Storage) write(key string, data []byte) error {
 	prefix, filename := s.transformPath(data)
-
 	folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
 	if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
 		return err
 	}
 
 	fullPath := fmt.Sprintf("%s/%s", folders, filename)
-
 	if s.Has(fullPath) {
 		return fmt.Errorf("collision detected! \nkey '%s' with data provided already exists", key)
 	}
