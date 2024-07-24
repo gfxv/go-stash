@@ -77,7 +77,7 @@ func (s *Storage) saveTree(key string, tree []string) error {
 		if err != nil {
 			return err
 		}
-		err = s.Write(key, file)
+		err = s.write(key, file)
 	}
 	return err
 }
@@ -86,8 +86,8 @@ func (s *Storage) Read(key string) {
 }
 
 // TODO: save key to db
-// Write ..
-func (s *Storage) Write(key string, data []byte) error {
+// write ..
+func (s *Storage) write(key string, data []byte) error {
 	prefix, filename := s.transformPath(data)
 
 	folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
