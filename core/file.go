@@ -13,16 +13,10 @@ func NewTree(root string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-
-		dir, err := isDir(path)
-		if err != nil {
-			return err
-		}
-
-		if dir {
+		if info.IsDir() {
 			return nil
 		}
-
+		
 		nodes = append(nodes, path)
 		return nil
 	}
