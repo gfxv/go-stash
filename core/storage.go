@@ -8,14 +8,17 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
+
+const PREFIX_LENGTH = 5
 
 type TransformPathFunc func([]byte) (string, string)
 
 func DefaultTransformPathFunc(data []byte) (prefix string, filename string) {
 	fullHash := sha1.Sum(data)
 	strHash := hex.EncodeToString(fullHash[:])
-	prefix, filename = strHash[:5], strHash[5:]
+	prefix, filename = strHash[:PREFIX_LENGTH], strHash[PREFIX_LENGTH:]
 	return
 }
 
@@ -93,10 +96,7 @@ func (s *Storage) saveTree(key string, tree []string) error {
 	return err
 }
 
-func (s *Storage) Read(key string) {
-}
-
-// write writes given data to the disk
+// write writes given data to the disk and returns content-based hash
 func (s *Storage) write(data []byte) (string, error) {
 	prefix, filename := s.transformPath(data)
 	folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
@@ -122,6 +122,55 @@ func (s *Storage) write(data []byte) (string, error) {
 	}
 
 	return prefix + filename, nil
+}
+
+func (s *Storage) Get(key string) ([]*File, error) {
+	hashes, err := s.db.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+
+	files := make([]*File, 0)
+	for _, hash := range hashes {
+		path := filepath.Join(s.baseDir, hash[:PREFIX_LENGTH], hash[PREFIX_LENGTH:])
+		file, err := s.read(path)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, file)
+	}
+	return files, nil
+}
+
+func (s *Storage) read(path string) (*File, error) {
+	compressed, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	file, err := s.unpack(compressed)
+	if err != nil {
+		return nil, err
+	}
+
+	var originalPath string
+	var originalData []byte
+	for i := range file {
+		if file[i] == 0 { // check if \u0000
+			originalPath = string(file[:i])
+			originalData = file[i+1:] // +1 to skip null-byte
+			break
+		}
+	}
+
+	return &File{
+		path: originalPath,
+		data: originalData,
+	}, nil
+}
+
+// RecreateTree ...
+func RecreateTree(path string, files []*File) error {
+	return nil
 }
 
 func (s *Storage) Delete() {}
