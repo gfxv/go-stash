@@ -75,19 +75,21 @@ func (s *Storage) Store(key string, paths ...string) error {
 	return err
 }
 
+// saveTree saves files to the disk and adds hashed paths to sqlite database
 func (s *Storage) saveTree(key string, tree []string) error {
 	var err error
+	paths := make([]string, 0)
 	for _, t := range tree {
 		file, err := os.ReadFile(t)
 		if err != nil {
 			return err
 		}
-		// header = path + \0
-		// data = header + file content (in bytes)
-		header := fmt.Sprintf("%s\u0000", t)
-		data := append([]byte(header), file...)
-		err = s.write(key, data)
+		header := fmt.Sprintf("%s\u0000", t)    // header = path + \0
+		data := append([]byte(header), file...) // data = header + file content (in bytes)
+		path, err := s.write(data)
+		paths = append(paths, path)
 	}
+	err = s.db.Add(key, paths)
 	return err
 }
 
@@ -95,32 +97,31 @@ func (s *Storage) Read(key string) {
 }
 
 // write writes given data to the disk
-func (s *Storage) write(key string, data []byte) error {
+func (s *Storage) write(data []byte) (string, error) {
 	prefix, filename := s.transformPath(data)
-	trKey := transformKey(key)
-	folders := fmt.Sprintf("%s/%s/%s", s.baseDir, trKey, prefix)
+	folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
 	if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
-		return err
+		return "", err
 	}
 
 	fullPath := fmt.Sprintf("%s/%s", folders, filename)
 	if s.Has(fullPath) {
-		return fmt.Errorf("collision detected! \nkey '%s' with data provided already exists", key)
+		return "", fmt.Errorf("collision detected! \n'%s/%s' already exists", prefix, filename)
 	}
 
 	file, err := os.Create(fullPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// write compressed data to storage
 	compressed := s.pack(data)
 	_, err = io.Copy(file, bytes.NewReader(compressed))
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return prefix + filename, nil
 }
 
 func (s *Storage) Delete() {}
