@@ -28,7 +28,6 @@ func NewDB(root string) (*DB, error) {
 }
 
 func (db *DB) init() (err error) {
-
 	stmt, err := db.database.Prepare("create table if not exists keys (" +
 		"id integer primary key autoincrement," +
 		"key text not null," +
