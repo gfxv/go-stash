@@ -5,6 +5,11 @@ import (
 	"path/filepath"
 )
 
+type File struct {
+	path string
+	data []byte
+}
+
 // NewTree creates directory hierarchy.
 func NewTree(root string) ([]string, error) {
 	var err error
@@ -16,7 +21,7 @@ func NewTree(root string) ([]string, error) {
 		if info.IsDir() {
 			return nil
 		}
-		
+
 		nodes = append(nodes, path)
 		return nil
 	}
