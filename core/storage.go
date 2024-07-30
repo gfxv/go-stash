@@ -27,17 +27,22 @@ func transformKey(key string) string {
 type Storage struct {
 	baseDir       string
 	transformPath TransformPathFunc
-	pack          PackFunc
-	unpack        UnpackFunc
+	db            *DB
+
+	pack   PackFunc
+	unpack UnpackFunc
 }
 
-func NewDefaultStorage() *Storage {
-	return &Storage{}
-}
+func NewDefaultStorage(root string) *Storage {
+	db, err := NewDB(root)
+	if err != nil {
+		panic(err) // TODO: refactor error handling
+	}
 
-func (s *Storage) WithBaseDir(baseDir string) *Storage {
-	s.baseDir = baseDir
-	return s
+	return &Storage{
+		baseDir: root,
+		db:      db,
+	}
 }
 
 func (s *Storage) WithTransformPathFunc(pathFunc TransformPathFunc) *Storage {
