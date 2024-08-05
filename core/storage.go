@@ -106,7 +106,7 @@ func (s *Storage) write(data []byte) (string, error) {
 
 	fullPath := fmt.Sprintf("%s/%s", folders, filename)
 	if s.Has(fullPath) {
-		return "", fmt.Errorf("collision detected! \n'%s/%s' already exists", prefix, filename)
+		return "", fmt.Errorf("stash: collision detected! \n'%s/%s' already exists", prefix, filename)
 	}
 
 	file, err := os.Create(fullPath)
@@ -169,8 +169,72 @@ func (s *Storage) read(path string) (*File, error) {
 }
 
 // RecreateTree ...
+// TODO: probably return []error (?)
 func RecreateTree(path string, files []*File) error {
+	// create destination folder if it does not exist
+	if !PathExists(path) {
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			return err
+		}
+	}
+
+	for _, file := range files {
+		fullPath := filepath.Join(path, file.path)
+		if PathExists(fullPath) {
+			// (?) TODO: add some flag that allows overriding files
+			err := compareFileContent(fullPath, &file.data)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		err := createFile(fullPath, &file.data)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// compareFileContent compares content (raw bytes) of two files.
+// Returns error if contents are not equal, otherwise - nil
+func compareFileContent(path string, data *[]byte) error {
+	f, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if bytes.Equal(f, *data) {
+		return nil
+	}
+	return fmt.Errorf("stash: file '%s' already exists and its content is different from stashed, please remove this file manualy to avoid data overriding or corruption", path)
+}
+
+// createFile ...
+func createFile(path string, data *[]byte) error {
+	parent := filepath.Dir(path)
+	if !PathExists(parent) {
+		if err := os.MkdirAll(parent, os.ModePerm); err != nil {
+			return err
+		}
+	}
+
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer func(file *os.File) {
+		tmpErr := file.Close()
+		if tmpErr != nil {
+			err = tmpErr
+		}
+	}(file)
+
+	// TODO: add logging ?
+	_, err = file.Write(*data)
+	if err != nil {
+		return err
+	}
+	return err
 }
 
 func (s *Storage) Delete() {}
