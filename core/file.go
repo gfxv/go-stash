@@ -41,3 +41,8 @@ func isDir(path string) (bool, error) {
 	}
 	return f.IsDir(), nil
 }
+
+func PathExists(path string) bool {
+	_, err := os.Stat(path)
+	return os.IsExist(err)
+}
