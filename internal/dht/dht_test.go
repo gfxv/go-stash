@@ -1,4 +1,4 @@
-package core
+package dht
 
 import (
 	"github.com/stretchr/testify/assert"
