@@ -99,12 +99,14 @@ func (s *Storage) saveTree(key string, tree []string) error {
 // write writes given data to the disk and returns content-based hash
 func (s *Storage) write(data []byte) (string, error) {
 	prefix, filename := s.transformPath(data)
-	folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
+	//folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
+	folders := filepath.Join(s.baseDir, prefix)
 	if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
 		return "", err
 	}
 
-	fullPath := fmt.Sprintf("%s/%s", folders, filename)
+	//fullPath := fmt.Sprintf("%s/%s", folders, filename)
+	fullPath := filepath.Join(folders, filename)
 	if s.Has(fullPath) {
 		return "", fmt.Errorf("stash: collision detected! \n'%s/%s' already exists", prefix, filename)
 	}

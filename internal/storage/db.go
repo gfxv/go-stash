@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"path/filepath"
 	"strings"
 )
 
@@ -15,7 +16,8 @@ type DB struct {
 }
 
 func NewDB(root string) (*DB, error) {
-	fullPath := fmt.Sprintf("%s/%s", root, DB_PATH)
+	//fullPath := fmt.Sprintf("%s/%s", root, DB_PATH)
+	fullPath := filepath.Join(root, DB_PATH)
 	database, err := sql.Open(DB_DRIVER, fullPath)
 	if err != nil {
 		return nil, err
