@@ -1,0 +1,33 @@
+syntax = "proto3";
+option go_package = "./api/;gen";
+
+import "google/protobuf/empty.proto";
+
+service Transporter {
+  rpc SendChunks(stream Chunk) returns (StreamStatus);
+  rpc SyncNodes(google.protobuf.Empty) returns (stream NodeInfo);
+  rpc AnnounceNewNode(NodeInfo) returns (google.protobuf.Empty);
+  rpc AnnounceRemoveNode(NodeInfo) returns (google.protobuf.Empty);
+}
+
+service HealthChecker {
+  rpc Healthcheck(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message Chunk {
+  oneof data {
+    string key = 1;
+    bytes chunk_data = 2;
+  }
+
+}
+
+message StreamStatus {
+  uint32 files_uploaded = 1;
+  uint32 total_size = 2;
+}
+
+message NodeInfo {
+  string address = 1;
+  // ... ?
+}
