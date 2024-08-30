@@ -89,15 +89,15 @@ func (s *Storage) saveTree(key string, tree []string) error {
 		}
 		header := fmt.Sprintf("%s\u0000", t)    // header = path + \0
 		data := append([]byte(header), file...) // data = header + file content (in bytes)
-		path, err := s.write(data)
+		path, err := s.Write(data)
 		paths = append(paths, path)
 	}
 	err = s.db.Add(key, paths)
 	return err
 }
 
-// write writes given data to the disk and returns content-based hash
-func (s *Storage) write(data []byte) (string, error) {
+// Write writes given data to the disk and returns content-based hash
+func (s *Storage) Write(data []byte) (string, error) {
 	prefix, filename := s.transformPath(data)
 	//folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
 	folders := filepath.Join(s.baseDir, prefix)
@@ -116,7 +116,7 @@ func (s *Storage) write(data []byte) (string, error) {
 		return "", err
 	}
 
-	// write compressed data to storage
+	// Write compressed data to storage
 	compressed := s.pack(data)
 	_, err = io.Copy(file, bytes.NewReader(compressed))
 	if err != nil {
