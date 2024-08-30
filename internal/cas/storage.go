@@ -1,4 +1,4 @@
-package storage
+package cas
 
 import (
 	"bytes"
@@ -64,6 +64,11 @@ func (s *Storage) Has(path string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
+// AddNewPath adds
+func (s *Storage) AddNewPath(key string, hash string) error {
+	return s.db.Add(key, []string{hash})
+}
+
 // Store receives path (or multiple paths) to file or directory that should be saved on the disk
 func (s *Storage) Store(key string, paths ...string) error {
 	var err error
@@ -89,41 +94,54 @@ func (s *Storage) saveTree(key string, tree []string) error {
 		}
 		header := fmt.Sprintf("%s\u0000", t)    // header = path + \0
 		data := append([]byte(header), file...) // data = header + file content (in bytes)
-		path, err := s.Write(data)
+		path, err := s.WriteFromRawData(data)
 		paths = append(paths, path)
 	}
 	err = s.db.Add(key, paths)
 	return err
 }
 
-// Write writes given data to the disk and returns content-based hash
-func (s *Storage) Write(data []byte) (string, error) {
+// Write writes given data to the disk
+func (s *Storage) Write(path string, data []byte) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WriteFromRawData ...
+func (s *Storage) WriteFromRawData(data []byte) (string, error) {
 	prefix, filename := s.transformPath(data)
-	//folders := fmt.Sprintf("%s/%s", s.baseDir, prefix)
 	folders := filepath.Join(s.baseDir, prefix)
 	if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
 		return "", err
 	}
 
-	//fullPath := fmt.Sprintf("%s/%s", folders, filename)
 	fullPath := filepath.Join(folders, filename)
 	if s.Has(fullPath) {
 		return "", fmt.Errorf("stash: collision detected! \n'%s/%s' already exists", prefix, filename)
 	}
 
-	file, err := os.Create(fullPath)
-	if err != nil {
-		return "", err
-	}
-
 	// Write compressed data to storage
 	compressed := s.pack(data)
-	_, err = io.Copy(file, bytes.NewReader(compressed))
+	err := s.Write(fullPath, compressed)
 	if err != nil {
 		return "", err
 	}
 
 	return prefix + filename, nil
+}
+
+func (s *Storage) MakePathFromHash(hash string) string {
+	return filepath.Join(s.baseDir, hash[:PREFIX_LENGTH], hash[PREFIX_LENGTH:])
 }
 
 func (s *Storage) Get(key string) ([]*File, error) {
