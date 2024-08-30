@@ -15,11 +15,15 @@ service HealthChecker {
 }
 
 message Chunk {
-  oneof data {
+  message FileMetadata {
     string key = 1;
-    bytes chunk_data = 2;
+    string content_hash = 2;
   }
 
+  oneof data {
+    FileMetadata meta = 1;
+    bytes chunk_data = 2;
+  }
 }
 
 message StreamStatus {
