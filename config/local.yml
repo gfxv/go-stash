@@ -1,0 +1,13 @@
+# settings for grpc service
+grpc:
+  port: ""
+  timeout: "" # ???
+  sync-node: ""
+
+# settings for cas
+storage:
+  path: "" # path to stash cas on local machine
+  compression-level: "" # later...
+  allow-server-side-compression: false
+
+
