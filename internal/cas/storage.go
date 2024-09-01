@@ -130,7 +130,7 @@ func (s *Storage) WriteFromRawData(data []byte) (string, error) {
 		return "", fmt.Errorf("stash: collision detected! \n'%s/%s' already exists", prefix, filename)
 	}
 
-	// Write compressed data to storage
+	// Write compressed data to cas
 	compressed := s.pack(data)
 	err := s.Write(fullPath, compressed)
 	if err != nil {
