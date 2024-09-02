@@ -14,10 +14,10 @@ import (
 
 type serverAPI struct {
 	gen.UnimplementedTransporterServer
-	storage cas.Storage
+	storage *cas.Storage
 }
 
-func Register(gRPC *grpc.Server, storage cas.Storage) {
+func Register(gRPC *grpc.Server, storage *cas.Storage) {
 	gen.RegisterTransporterServer(gRPC, &serverAPI{storage: storage})
 }
 
@@ -48,7 +48,12 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 
 	// save data on disk
 	// NOTE: data already has a header and been compressed
-	err = s.storage.Write(s.storage.MakePathFromHash(contentHash), buffer.Bytes())
+	contentPath := s.storage.MakePathFromHash(contentHash)
+	err = s.storage.PrepareParentFolders(contentPath)
+	if err != nil {
+		return status.Errorf(codes.Internal, "can't prepare parent folders: %v", err)
+	}
+	err = s.storage.Write(contentPath, buffer.Bytes())
 	if err != nil {
 		return status.Errorf(codes.Internal, "can't store file file to storage: %v", err)
 	}
