@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 	grpcapp "github.com/gfxv/go-stash/internal/app/grpc"
-	"github.com/gfxv/go-stash/internal/cas"
+	"github.com/gfxv/go-stash/pkg/cas"
 )
 
 type ApplicationOpts struct {

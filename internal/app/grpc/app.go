@@ -2,8 +2,8 @@ package grpcapp
 
 import (
 	"fmt"
-	"github.com/gfxv/go-stash/internal/cas"
 	"github.com/gfxv/go-stash/internal/grpc/transporter"
+	"github.com/gfxv/go-stash/pkg/cas"
 	"google.golang.org/grpc"
 	"log"
 	"net"
