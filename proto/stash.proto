@@ -17,7 +17,8 @@ service HealthChecker {
 message Chunk {
   message FileMetadata {
     string key = 1;
-    string content_hash = 2;
+    optional string content_hash = 2;
+    bool compressed = 3;
   }
 
   oneof data {
@@ -27,8 +28,7 @@ message Chunk {
 }
 
 message StreamStatus {
-  uint32 files_uploaded = 1;
-  uint32 total_size = 2;
+  uint32 size = 1;
 }
 
 message NodeInfo {

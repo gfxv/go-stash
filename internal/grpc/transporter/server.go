@@ -66,8 +66,7 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 
 	// TODO: ...
 	return stream.SendAndClose(&gen.StreamStatus{
-		FilesUploaded: 0,
-		TotalSize:     0,
+		Size: 0,
 	})
 }
 
