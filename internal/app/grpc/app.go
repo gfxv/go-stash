@@ -1,14 +1,56 @@
 package grpcapp
 
+import (
+	"fmt"
+	"github.com/gfxv/go-stash/internal/cas"
+	"github.com/gfxv/go-stash/internal/grpc/transporter"
+	"google.golang.org/grpc"
+	"log"
+	"net"
+)
+
 type App struct {
-	port int // change port to GRPCServerOpts ?
+	grpcServer *grpc.Server
+	port       int
+
+	storage cas.Storage
 }
 
-func New() *App {
-	return &App{}
+// New creates new gRPC server app
+func New(port int, storage *cas.Storage) *App {
+	server := grpc.NewServer()
+	transporter.Register(server, storage)
+
+	return &App{
+		port:       port,
+		grpcServer: server,
+	}
 }
 
-func (a *App) Run() {
-	//server := grpc.NewServer()
+// MustRun runs gRPC server and panics if any error occurs
+func (a *App) MustRun() {
+	if err := a.Run(); err != nil {
+		panic(err)
+	}
+}
 
+// Run runs gRPC server
+func (a *App) Run() error {
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
+
+	log.Println("grpc server listening on", l.Addr())
+
+	if err := a.grpcServer.Serve(l); err != nil {
+		return fmt.Errorf("failed to serve: %v", err)
+	}
+
+	return err
+}
+
+// Stop stops gRPC server
+func (a *App) Stop() {
+	a.grpcServer.GracefulStop()
 }
