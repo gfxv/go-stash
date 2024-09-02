@@ -36,16 +36,17 @@ type Storage struct {
 	unpack UnpackFunc
 }
 
-func NewDefaultStorage(root string) *Storage {
+func NewDefaultStorage(root string) (*Storage, error) {
 	db, err := NewDB(root)
 	if err != nil {
-		panic(err) // TODO: refactor error handling
+		fmt.Println("storage.NewDefaultStorage")
+		return nil, err
 	}
 
 	return &Storage{
 		baseDir: root,
 		db:      db,
-	}
+	}, nil
 }
 
 func (s *Storage) WithTransformPathFunc(pathFunc TransformPathFunc) *Storage {
@@ -142,6 +143,14 @@ func (s *Storage) WriteFromRawData(data []byte) (string, error) {
 
 func (s *Storage) MakePathFromHash(hash string) string {
 	return filepath.Join(s.baseDir, hash[:PREFIX_LENGTH], hash[PREFIX_LENGTH:])
+}
+
+func (s *Storage) PrepareParentFolders(fullPath string) error {
+	parents := filepath.Dir(fullPath)
+	if err := os.MkdirAll(parents, os.ModePerm); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Storage) Get(key string) ([]*File, error) {
