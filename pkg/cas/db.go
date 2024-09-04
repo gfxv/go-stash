@@ -65,7 +65,6 @@ func (db *DB) Add(key string, hashes []string) error {
 		}
 	}(stmt)
 
-	fmt.Println(stmtStr)
 	_, err = stmt.Exec(vals...)
 
 	return err

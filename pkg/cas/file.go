@@ -6,8 +6,8 @@ import (
 )
 
 type File struct {
-	path string
-	data []byte
+	Path string
+	Data []byte
 }
 
 // NewTree creates directory hierarchy.

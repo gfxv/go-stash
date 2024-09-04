@@ -93,8 +93,7 @@ func (s *Storage) saveTree(key string, tree []string) error {
 		if err != nil {
 			return err
 		}
-		header := fmt.Sprintf("%s\u0000", t)    // header = path + \0
-		data := append([]byte(header), file...) // data = header + file content (in bytes)
+		data := PrepareRawFile(t, file)
 		path, err := s.WriteFromRawData(data)
 		paths = append(paths, path)
 	}
@@ -102,7 +101,15 @@ func (s *Storage) saveTree(key string, tree []string) error {
 	return err
 }
 
-// Write writes given data to the disk
+// PrepareRawFile adds a special header to the beginning of a file
+// and returns new file's content as raw bytes
+func PrepareRawFile(path string, data []byte) []byte {
+	header := fmt.Sprintf("%s\u0000", path)     // header = Path + \0
+	prepared := append([]byte(header), data...) // prepared = header + Data (file content in bytes)
+	return prepared
+}
+
+// Write writes given Data to the disk
 func (s *Storage) Write(path string, data []byte) error {
 	file, err := os.Create(path)
 	if err != nil {
@@ -192,8 +199,8 @@ func (s *Storage) read(path string) (*File, error) {
 	}
 
 	return &File{
-		path: originalPath,
-		data: originalData,
+		Path: originalPath,
+		Data: originalData,
 	}, nil
 }
 
@@ -208,16 +215,16 @@ func RecreateTree(path string, files []*File) error {
 	}
 
 	for _, file := range files {
-		fullPath := filepath.Join(path, file.path)
+		fullPath := filepath.Join(path, file.Path)
 		if PathExists(fullPath) {
 			// (?) TODO: add some flag that allows overriding files
-			err := compareFileContent(fullPath, &file.data)
+			err := compareFileContent(fullPath, &file.Data)
 			if err != nil {
 				return err
 			}
 			continue
 		}
-		err := createFile(fullPath, &file.data)
+		err := createFile(fullPath, &file.Data)
 		if err != nil {
 			return err
 		}
