@@ -3,6 +3,7 @@ package grpcapp
 import (
 	"fmt"
 	"github.com/gfxv/go-stash/internal/grpc/transporter"
+	"github.com/gfxv/go-stash/internal/services"
 	"github.com/gfxv/go-stash/pkg/cas"
 	"google.golang.org/grpc"
 	"log"
@@ -17,7 +18,7 @@ type App struct {
 }
 
 // New creates new gRPC server app
-func New(port int, storage *cas.Storage) *App {
+func New(port int, storage *services.StorageService) *App {
 	server := grpc.NewServer()
 	transporter.Register(server, storage)
 

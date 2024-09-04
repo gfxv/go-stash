@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	gen "github.com/gfxv/go-stash/api"
+	"github.com/gfxv/go-stash/internal/services"
 	"github.com/gfxv/go-stash/pkg/cas"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -14,11 +15,11 @@ import (
 
 type serverAPI struct {
 	gen.UnimplementedTransporterServer
-	storage *cas.Storage
+	storageService *services.StorageService
 }
 
-func Register(gRPC *grpc.Server, storage *cas.Storage) {
-	gen.RegisterTransporterServer(gRPC, &serverAPI{storage: storage})
+func Register(gRPC *grpc.Server, storageService *services.StorageService) {
+	gen.RegisterTransporterServer(gRPC, &serverAPI{storageService: storageService})
 }
 
 func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
@@ -26,8 +27,9 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 	if err != nil {
 		return status.Errorf(codes.Unknown, "can't receive key: %v", err)
 	}
-	key := req.GetMeta().GetKey()                 // key
-	contentHash := req.GetMeta().GetContentHash() // hash = filepath
+
+	key := req.GetMeta().GetKey() // key
+	compressed := req.GetMeta().GetCompressed()
 
 	buffer := bytes.Buffer{}
 	for {
@@ -46,27 +48,25 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 		}
 	}
 
-	// save data on disk
-	// NOTE: data already has a header and been compressed
-	contentPath := s.storage.MakePathFromHash(contentHash)
-	err = s.storage.PrepareParentFolders(contentPath)
-	if err != nil {
-		return status.Errorf(codes.Internal, "can't prepare parent folders: %v", err)
-	}
-	err = s.storage.Write(contentPath, buffer.Bytes())
-	if err != nil {
-		return status.Errorf(codes.Internal, "can't store file file to storage: %v", err)
+	if compressed {
+		contentHash := req.GetMeta().GetContentHash()
+		err := s.storageService.SaveCompressed(key, contentHash, buffer.Bytes())
+		if err != nil {
+			return status.Errorf(codes.Internal, "can't save compressed file: %v", err)
+		}
+	} else {
+		file := &cas.File{
+			Path: req.GetMeta().GetFilePath(),
+			Data: buffer.Bytes(),
+		}
+		err := s.storageService.SaveRaw(key, file)
+		if err != nil {
+			return status.Errorf(codes.Internal, "can't save raw file: %v", err)
+		}
 	}
 
-	// save path to meta.db
-	err = s.storage.AddNewPath(key, contentHash)
-	if err != nil {
-		return status.Errorf(codes.Internal, "can't store key-hash pair")
-	}
-
-	// TODO: ...
 	return stream.SendAndClose(&gen.StreamStatus{
-		Size: 0,
+		Size: uint32(len(buffer.Bytes())),
 	})
 }
 

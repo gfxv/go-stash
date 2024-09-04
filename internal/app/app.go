@@ -1,8 +1,8 @@
 package app
 
 import (
-	"fmt"
 	grpcapp "github.com/gfxv/go-stash/internal/app/grpc"
+	"github.com/gfxv/go-stash/internal/services"
 	"github.com/gfxv/go-stash/pkg/cas"
 )
 
@@ -18,11 +18,10 @@ type App struct {
 func NewApp(opts *ApplicationOpts) *App {
 	storage, err := cas.NewDefaultStorage(opts.StorageRoot)
 	if err != nil {
-		fmt.Println("app.app")
 		panic(err)
 	}
-
-	grpcApp := grpcapp.New(opts.Port, storage)
+	storageService := services.NewStorageService(storage)
+	grpcApp := grpcapp.New(opts.Port, storageService)
 
 	return &App{
 		GRPC: grpcApp,
