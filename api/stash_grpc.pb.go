@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Transporter_SendChunks_FullMethodName         = "/Transporter/SendChunks"
+	Transporter_ReceiveInfo_FullMethodName        = "/Transporter/ReceiveInfo"
+	Transporter_ReceiveChunks_FullMethodName      = "/Transporter/ReceiveChunks"
 	Transporter_SyncNodes_FullMethodName          = "/Transporter/SyncNodes"
 	Transporter_AnnounceNewNode_FullMethodName    = "/Transporter/AnnounceNewNode"
 	Transporter_AnnounceRemoveNode_FullMethodName = "/Transporter/AnnounceRemoveNode"
@@ -31,6 +33,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TransporterClient interface {
 	SendChunks(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Chunk, StreamStatus], error)
+	ReceiveInfo(ctx context.Context, in *ReceiveInfoRequest, opts ...grpc.CallOption) (*ReceiveInfoResponse, error)
+	ReceiveChunks(ctx context.Context, in *ReceiveChunkRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ReceiveChunkResponse], error)
 	SyncNodes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[NodeInfo], error)
 	AnnounceNewNode(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AnnounceRemoveNode(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -57,9 +61,38 @@ func (c *transporterClient) SendChunks(ctx context.Context, opts ...grpc.CallOpt
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Transporter_SendChunksClient = grpc.ClientStreamingClient[Chunk, StreamStatus]
 
+func (c *transporterClient) ReceiveInfo(ctx context.Context, in *ReceiveInfoRequest, opts ...grpc.CallOption) (*ReceiveInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReceiveInfoResponse)
+	err := c.cc.Invoke(ctx, Transporter_ReceiveInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transporterClient) ReceiveChunks(ctx context.Context, in *ReceiveChunkRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ReceiveChunkResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &Transporter_ServiceDesc.Streams[1], Transporter_ReceiveChunks_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ReceiveChunkRequest, ReceiveChunkResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Transporter_ReceiveChunksClient = grpc.ServerStreamingClient[ReceiveChunkResponse]
+
 func (c *transporterClient) SyncNodes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[NodeInfo], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Transporter_ServiceDesc.Streams[1], Transporter_SyncNodes_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Transporter_ServiceDesc.Streams[2], Transporter_SyncNodes_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +134,8 @@ func (c *transporterClient) AnnounceRemoveNode(ctx context.Context, in *NodeInfo
 // for forward compatibility.
 type TransporterServer interface {
 	SendChunks(grpc.ClientStreamingServer[Chunk, StreamStatus]) error
+	ReceiveInfo(context.Context, *ReceiveInfoRequest) (*ReceiveInfoResponse, error)
+	ReceiveChunks(*ReceiveChunkRequest, grpc.ServerStreamingServer[ReceiveChunkResponse]) error
 	SyncNodes(*emptypb.Empty, grpc.ServerStreamingServer[NodeInfo]) error
 	AnnounceNewNode(context.Context, *NodeInfo) (*emptypb.Empty, error)
 	AnnounceRemoveNode(context.Context, *NodeInfo) (*emptypb.Empty, error)
@@ -116,6 +151,12 @@ type UnimplementedTransporterServer struct{}
 
 func (UnimplementedTransporterServer) SendChunks(grpc.ClientStreamingServer[Chunk, StreamStatus]) error {
 	return status.Errorf(codes.Unimplemented, "method SendChunks not implemented")
+}
+func (UnimplementedTransporterServer) ReceiveInfo(context.Context, *ReceiveInfoRequest) (*ReceiveInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReceiveInfo not implemented")
+}
+func (UnimplementedTransporterServer) ReceiveChunks(*ReceiveChunkRequest, grpc.ServerStreamingServer[ReceiveChunkResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method ReceiveChunks not implemented")
 }
 func (UnimplementedTransporterServer) SyncNodes(*emptypb.Empty, grpc.ServerStreamingServer[NodeInfo]) error {
 	return status.Errorf(codes.Unimplemented, "method SyncNodes not implemented")
@@ -153,6 +194,35 @@ func _Transporter_SendChunks_Handler(srv interface{}, stream grpc.ServerStream) 
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Transporter_SendChunksServer = grpc.ClientStreamingServer[Chunk, StreamStatus]
+
+func _Transporter_ReceiveInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReceiveInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransporterServer).ReceiveInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Transporter_ReceiveInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransporterServer).ReceiveInfo(ctx, req.(*ReceiveInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Transporter_ReceiveChunks_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ReceiveChunkRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TransporterServer).ReceiveChunks(m, &grpc.GenericServerStream[ReceiveChunkRequest, ReceiveChunkResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Transporter_ReceiveChunksServer = grpc.ServerStreamingServer[ReceiveChunkResponse]
 
 func _Transporter_SyncNodes_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(emptypb.Empty)
@@ -209,6 +279,10 @@ var Transporter_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*TransporterServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "ReceiveInfo",
+			Handler:    _Transporter_ReceiveInfo_Handler,
+		},
+		{
 			MethodName: "AnnounceNewNode",
 			Handler:    _Transporter_AnnounceNewNode_Handler,
 		},
@@ -222,6 +296,11 @@ var Transporter_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "SendChunks",
 			Handler:       _Transporter_SendChunks_Handler,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "ReceiveChunks",
+			Handler:       _Transporter_ReceiveChunks_Handler,
+			ServerStreams: true,
 		},
 		{
 			StreamName:    "SyncNodes",
