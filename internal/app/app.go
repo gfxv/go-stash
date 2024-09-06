@@ -8,7 +8,7 @@ import (
 
 type ApplicationOpts struct {
 	Port        int
-	StorageRoot string
+	StorageOpts cas.StorageOpts
 }
 
 type App struct {
@@ -16,7 +16,7 @@ type App struct {
 }
 
 func NewApp(opts *ApplicationOpts) *App {
-	storage, err := cas.NewDefaultStorage(opts.StorageRoot)
+	storage, err := cas.NewDefaultStorage(opts.StorageOpts)
 	if err != nil {
 		panic(err)
 	}

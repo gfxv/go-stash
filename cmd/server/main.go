@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gfxv/go-stash/internal/app"
+	"github.com/gfxv/go-stash/pkg/cas"
 	"log"
 	"os"
 	"os/signal"
@@ -10,9 +11,16 @@ import (
 
 func main() {
 
+	storageOpts := cas.StorageOpts{
+		BaseDir:  "stash",
+		PathFunc: cas.DefaultTransformPathFunc,
+		Pack:     cas.ZLibPack,
+		Unpack:   cas.ZLibUnpack,
+	}
+
 	appOpts := &app.ApplicationOpts{
 		Port:        5555,
-		StorageRoot: "stash",
+		StorageOpts: storageOpts,
 	}
 
 	application := app.NewApp(appOpts)
