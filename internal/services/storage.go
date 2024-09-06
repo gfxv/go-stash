@@ -46,3 +46,11 @@ func (s *StorageService) SaveRaw(key string, file *cas.File) error {
 
 	return nil
 }
+
+func (s *StorageService) GetHashesByKey(key string) ([]string, error) {
+	hashes, err := s.storage.GetHashesByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	return hashes, nil
+}

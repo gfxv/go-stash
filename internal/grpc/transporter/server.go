@@ -22,14 +22,13 @@ func Register(gRPC *grpc.Server, storageService *services.StorageService) {
 	gen.RegisterTransporterServer(gRPC, &serverAPI{storageService: storageService})
 }
 
+// SendChunks receives a stream of file chunks (or whole file)
+// from client and stores it on disk
 func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 	req, err := stream.Recv()
 	if err != nil {
 		return status.Errorf(codes.Unknown, "can't receive key: %v", err)
 	}
-
-	key := req.GetMeta().GetKey() // key
-	compressed := req.GetMeta().GetCompressed()
 
 	buffer := bytes.Buffer{}
 	for {
@@ -47,6 +46,11 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 			return status.Errorf(codes.Internal, "can't write chunk data: %v", err)
 		}
 	}
+
+	key := req.GetMeta().GetKey()
+	compressed := req.GetMeta().GetCompressed()
+
+	// TODO: check if optional fields exist (!!!)
 
 	if compressed {
 		contentHash := req.GetMeta().GetContentHash()
@@ -70,12 +74,45 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 	})
 }
 
+// ReceiveInfo returns hashes that have same key
+func (s *serverAPI) ReceiveInfo(
+	ctx context.Context,
+	infoRequest *gen.ReceiveInfoRequest,
+) (*gen.ReceiveInfoResponse, error) {
+
+	key := infoRequest.GetKey()
+
+	hashes, err := s.storageService.GetHashesByKey(key)
+	if err != nil {
+		// mb codes.Internal is better ...?
+		return nil, status.Errorf(codes.NotFound, "can't get files: %v", err)
+	}
+
+	response := &gen.ReceiveInfoResponse{
+		Size:   uint32(len(hashes)),
+		Hashes: hashes,
+	}
+
+	return response, nil
+}
+
+// ReceiveChunks sends a stream of file chunks
+// (or whole file) based on provided hash
+func (s *serverAPI) ReceiveChunks(
+	chunkRequest *gen.ReceiveChunkRequest,
+	stream gen.Transporter_ReceiveChunksServer,
+) error {
+	return nil
+}
+
+// SyncNodes ...
 func (s *serverAPI) SyncNodes(_ *emptypb.Empty, stream gen.Transporter_SyncNodesServer) error {
 	// read nodes from file or dht
 	// stream response
 	return nil
 }
 
+// AnnounceNewNode ...
 func (s *serverAPI) AnnounceNewNode(
 	ctx context.Context,
 	newNode *gen.NodeInfo,
@@ -83,6 +120,7 @@ func (s *serverAPI) AnnounceNewNode(
 	return nil, nil
 }
 
+// AnnounceRemoveNode ...
 func (s *serverAPI) AnnounceRemoveNode(
 	ctx context.Context,
 	deadNode *gen.NodeInfo,
