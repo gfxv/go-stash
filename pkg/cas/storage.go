@@ -22,9 +22,11 @@ func DefaultTransformPathFunc(data []byte) (prefix string, filename string) {
 	return
 }
 
-func transformKey(key string) string {
-	keyHash := sha1.Sum([]byte(key))
-	return hex.EncodeToString(keyHash[:])
+type StorageOpts struct {
+	BaseDir  string
+	PathFunc TransformPathFunc
+	Pack     PackFunc
+	Unpack   UnpackFunc
 }
 
 type Storage struct {
@@ -36,28 +38,20 @@ type Storage struct {
 	unpack UnpackFunc
 }
 
-func NewDefaultStorage(root string) (*Storage, error) {
-	db, err := NewDB(root)
+func NewDefaultStorage(opts StorageOpts) (*Storage, error) {
+	db, err := NewDB(opts.BaseDir)
 	if err != nil {
 		fmt.Println("storage.NewDefaultStorage")
 		return nil, err
 	}
 
 	return &Storage{
-		baseDir: root,
-		db:      db,
+		baseDir:       opts.BaseDir,
+		transformPath: opts.PathFunc,
+		db:            db,
+		pack:          opts.Pack,
+		unpack:        opts.Unpack,
 	}, nil
-}
-
-func (s *Storage) WithTransformPathFunc(pathFunc TransformPathFunc) *Storage {
-	s.transformPath = pathFunc
-	return s
-}
-
-func (s *Storage) WithCompressionFuncs(compress PackFunc, decompress UnpackFunc) *Storage {
-	s.pack = compress
-	s.unpack = decompress
-	return s
 }
 
 func (s *Storage) Has(path string) bool {
@@ -271,6 +265,10 @@ func createFile(path string, data *[]byte) error {
 		return err
 	}
 	return err
+}
+
+func (s *Storage) GetHashesByKey(key string) ([]string, error) {
+	return s.db.GetByKey(key)
 }
 
 func (s *Storage) Delete() {}
