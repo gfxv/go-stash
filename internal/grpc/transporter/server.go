@@ -56,17 +56,23 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 		}
 	}
 
-	// TODO: check if optional fields exist (!!!)
-
 	if compressed {
 		contentHash := req.GetMeta().GetContentHash()
+		if len(contentHash) == 0 {
+			return status.Errorf(codes.InvalidArgument, "empty hash")
+		}
+
 		err := s.storageService.SaveCompressed(key, contentHash, buffer.Bytes())
 		if err != nil {
 			return status.Errorf(codes.Internal, "can't save compressed file: %v", err)
 		}
 	} else {
+		path := req.GetMeta().GetFilePath()
+		if len(path) == 0 {
+			return status.Errorf(codes.InvalidArgument, "empty path")
+		}
 		file := &cas.File{
-			Path: req.GetMeta().GetFilePath(),
+			Path: path,
 			Data: buffer.Bytes(),
 		}
 		err := s.storageService.SaveRaw(key, file)
@@ -85,7 +91,6 @@ func (s *serverAPI) ReceiveInfo(
 	ctx context.Context,
 	infoRequest *gen.ReceiveInfoRequest,
 ) (*gen.ReceiveInfoResponse, error) {
-
 	key := infoRequest.GetKey()
 	if len(key) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "empty key")
@@ -111,7 +116,6 @@ func (s *serverAPI) ReceiveChunks(
 	chunkRequest *gen.ReceiveChunkRequest,
 	stream gen.Transporter_ReceiveChunksServer,
 ) error {
-
 	hash := chunkRequest.GetHash()
 	if len(hash) == 0 {
 		return status.Error(codes.InvalidArgument, "empty hash")
