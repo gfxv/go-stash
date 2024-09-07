@@ -30,6 +30,12 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 		return status.Errorf(codes.Unknown, "can't receive key: %v", err)
 	}
 
+	key := req.GetMeta().GetKey()
+	if len(key) == 0 {
+		return status.Errorf(codes.InvalidArgument, "empty key")
+	}
+	compressed := req.GetMeta().GetCompressed()
+
 	buffer := bytes.Buffer{}
 	for {
 		req, err := stream.Recv()
@@ -41,14 +47,14 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 		}
 
 		chunk := req.GetChunkData()
+		if chunk == nil || len(chunk) == 0 {
+			return status.Errorf(codes.InvalidArgument, "empty chunk")
+		}
 		_, err = buffer.Write(chunk)
 		if err != nil {
 			return status.Errorf(codes.Internal, "can't write chunk data: %v", err)
 		}
 	}
-
-	key := req.GetMeta().GetKey()
-	compressed := req.GetMeta().GetCompressed()
 
 	// TODO: check if optional fields exist (!!!)
 
@@ -81,6 +87,9 @@ func (s *serverAPI) ReceiveInfo(
 ) (*gen.ReceiveInfoResponse, error) {
 
 	key := infoRequest.GetKey()
+	if len(key) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "empty key")
+	}
 
 	hashes, err := s.storageService.GetHashesByKey(key)
 	if err != nil {
@@ -102,6 +111,24 @@ func (s *serverAPI) ReceiveChunks(
 	chunkRequest *gen.ReceiveChunkRequest,
 	stream gen.Transporter_ReceiveChunksServer,
 ) error {
+
+	hash := chunkRequest.GetHash()
+	if len(hash) == 0 {
+		return status.Error(codes.InvalidArgument, "empty hash")
+	}
+	needDecompression := chunkRequest.GetNeedDecompression()
+
+	fileContent, err := s.storageService.GetFileDataByHash(hash, needDecompression)
+	if err != nil {
+		return status.Errorf(codes.NotFound, "can't get file with hash %s: %v", hash, err)
+	}
+
+	// TODO: add byte splitting and streaming file in chunks
+	chunk := &gen.ReceiveChunkResponse{Data: fileContent}
+	if err := stream.Send(chunk); err != nil {
+		return status.Errorf(codes.Unknown, "can't send chunk: %v", err)
+	}
+
 	return nil
 }
 

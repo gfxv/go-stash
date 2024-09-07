@@ -54,3 +54,16 @@ func (s *StorageService) GetHashesByKey(key string) ([]string, error) {
 	}
 	return hashes, nil
 }
+
+func (s *StorageService) GetFileDataByHash(hash string, needDecompression bool) ([]byte, error) {
+	compressed, err := s.storage.GetByHash(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	if !needDecompression {
+		return compressed, nil
+	}
+
+	return s.storage.Unpack(compressed)
+}

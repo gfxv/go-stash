@@ -34,8 +34,8 @@ type Storage struct {
 	transformPath TransformPathFunc
 	db            *DB
 
-	pack   PackFunc
-	unpack UnpackFunc
+	Pack   PackFunc
+	Unpack UnpackFunc
 }
 
 func NewDefaultStorage(opts StorageOpts) (*Storage, error) {
@@ -49,8 +49,8 @@ func NewDefaultStorage(opts StorageOpts) (*Storage, error) {
 		baseDir:       opts.BaseDir,
 		transformPath: opts.PathFunc,
 		db:            db,
-		pack:          opts.Pack,
-		unpack:        opts.Unpack,
+		Pack:          opts.Pack,
+		Unpack:        opts.Unpack,
 	}, nil
 }
 
@@ -133,7 +133,7 @@ func (s *Storage) WriteFromRawData(data []byte) (string, error) {
 	}
 
 	// Write compressed data to cas
-	compressed := s.pack(data)
+	compressed := s.Pack(data)
 	err := s.Write(fullPath, compressed)
 	if err != nil {
 		return "", err
@@ -172,12 +172,22 @@ func (s *Storage) Get(key string) ([]*File, error) {
 	return files, nil
 }
 
+// GetByHash returns file content in bytes
+func (s *Storage) GetByHash(hash string) ([]byte, error) {
+	path := filepath.Join(s.baseDir, hash[:PREFIX_LENGTH], hash[PREFIX_LENGTH:])
+	compressed, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return compressed, nil
+}
+
 func (s *Storage) read(path string) (*File, error) {
 	compressed, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	file, err := s.unpack(compressed)
+	file, err := s.Unpack(compressed)
 	if err != nil {
 		return nil, err
 	}
