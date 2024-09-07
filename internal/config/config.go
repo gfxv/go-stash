@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"github.com/ilyakaznacheev/cleanenv"
 	"os"
 	"time"
 )
@@ -15,15 +16,20 @@ type Config struct {
 	Storage StorageConfig `yaml:"cas"`
 }
 
+// TODO: add description for config fields
+// see github.com/ilyakaznacheev/cleaner?tab=readme-ov-file#description
+
 type GRPCConfig struct {
-	Port    int           `yaml:"port"`
-	Timeout time.Duration `yaml:"timeout"`
-	Nodes   []string      `yaml:"nodes"`
+	Port     int           `yaml:"port" env:"PORT" env-default:"5555"`
+	Timeout  time.Duration `yaml:"timeout" env:"TIMEOUT" env-default:"10s"`
+	SyncNode string        `yaml:"sync-node" env:"SYNC_NODE"`
+	Nodes    []string      `yaml:"nodes" env:"NODES" env-separator:";"`
 }
 
 type StorageConfig struct {
-	Path             string `yaml:"path"`
-	CompressionLevel int    `yaml:"compression-level"`
+	Path                       string `yaml:"path" env:"STASH_PATH" env-default:"./stash/"`
+	CompressionLevel           int    `yaml:"compression-level" env:"STASH_COMPRESSION_LEVEL" env-default:"0"` // TODO: <-- ???
+	AllowServerSideCompression bool   `yaml:"allow-server-side-compression" env:"ALLOW_SERVER_SIDE_COMPRESSION" env-default:"false"`
 }
 
 func MustLoad() *Config {
@@ -36,7 +42,12 @@ func MustLoad() *Config {
 		panic("config file does not exist: " + err.Error())
 	}
 
-	return &Config{}
+	var cfg Config
+	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+		panic("can not read config file: " + err.Error())
+	}
+
+	return &cfg
 }
 
 func parseConfigPath() string {

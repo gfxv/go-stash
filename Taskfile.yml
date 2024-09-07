@@ -19,4 +19,5 @@ tasks:
   install-app-deps:
     desc: "Install required dependencies for running app"
     cmds:
-      - go get google.golang.org/grpc
+      - go get -u google.golang.org/grpc
+      - go get -u github.com/ilyakaznacheev/cleanenv
