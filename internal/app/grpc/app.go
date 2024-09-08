@@ -35,14 +35,14 @@ func New(port int, storage *services.StorageService) *App {
 }
 
 // MustRun runs gRPC server and panics if any error occurs
-func (a *App) MustRun() {
-	if err := a.Run(); err != nil {
+func (a *App) MustRun(notifyReady chan<- bool) {
+	if err := a.Run(notifyReady); err != nil {
 		panic(err)
 	}
 }
 
 // Run runs gRPC server
-func (a *App) Run() error {
+func (a *App) Run(notifyReady chan<- bool) error {
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", a.port))
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
@@ -50,6 +50,7 @@ func (a *App) Run() error {
 
 	log.Println("grpc server listening on", l.Addr())
 
+	notifyReady <- true
 	if err := a.grpcServer.Serve(l); err != nil {
 		return fmt.Errorf("failed to serve: %v", err)
 	}

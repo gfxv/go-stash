@@ -1,16 +1,16 @@
 package main
 
 import (
-	"github.com/gfxv/go-stash/internal/app"
-	"github.com/gfxv/go-stash/pkg/cas"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/gfxv/go-stash/internal/app"
+	"github.com/gfxv/go-stash/pkg/cas"
 )
 
 func main() {
-
 	storageOpts := cas.StorageOpts{
 		BaseDir:  "stash",
 		PathFunc: cas.DefaultTransformPathFunc,
@@ -25,8 +25,9 @@ func main() {
 
 	application := app.NewApp(appOpts)
 
+	notifyReady := make(chan bool, 1)
 	go func() {
-		application.GRPC.MustRun()
+		application.GRPC.MustRun(notifyReady)
 	}()
 
 	stop := make(chan os.Signal, 1)
