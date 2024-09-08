@@ -7,11 +7,12 @@ import (
 )
 
 type Node struct {
-	Addr net.Addr
+	Addr  net.Addr
+	Alive bool
 }
 
 func NewNode(addr net.Addr) *Node {
-	return &Node{addr}
+	return &Node{addr, false}
 }
 
 func HashKey(key string) int {
