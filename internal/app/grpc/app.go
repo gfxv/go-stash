@@ -2,12 +2,15 @@ package grpcapp
 
 import (
 	"fmt"
+	"log"
+	"net"
+
+	"github.com/gfxv/go-stash/internal/grpc/healthchecker"
 	"github.com/gfxv/go-stash/internal/grpc/transporter"
 	"github.com/gfxv/go-stash/internal/services"
 	"github.com/gfxv/go-stash/pkg/cas"
 	"google.golang.org/grpc"
-	"log"
-	"net"
+	"google.golang.org/grpc/reflection"
 )
 
 type App struct {
@@ -20,7 +23,10 @@ type App struct {
 // New creates new gRPC server app
 func New(port int, storage *services.StorageService) *App {
 	server := grpc.NewServer()
+	healthchecker.Register(server)
 	transporter.Register(server, storage)
+
+	reflection.Register(server)
 
 	return &App{
 		port:       port,

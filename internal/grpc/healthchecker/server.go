@@ -18,5 +18,5 @@ func Register(gRPC *grpc.Server) {
 func (s *serverAPI) Healthcheck(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	// just a healthcheck of a node
 	// no need for something special
-	return nil, nil
+	return &emptypb.Empty{}, nil
 }
