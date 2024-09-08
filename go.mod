@@ -1,8 +1,8 @@
 module github.com/gfxv/go-stash
 
-go 1.21
+go 1.22.6
 
-toolchain go1.22.2
+toolchain go1.22.7
 
 require (
 	github.com/mattn/go-sqlite3 v1.14.22
