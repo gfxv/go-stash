@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/gfxv/go-stash/internal/config"
 	"log"
 	"os"
 	"os/signal"
@@ -11,15 +13,19 @@ import (
 )
 
 func main() {
+
+	cfg := config.MustLoad()
+	fmt.Println(cfg)
+
 	storageOpts := cas.StorageOpts{
-		BaseDir:  "stash",
+		BaseDir:  cfg.Storage.Path,
 		PathFunc: cas.DefaultTransformPathFunc,
 		Pack:     cas.ZLibPack,
 		Unpack:   cas.ZLibUnpack,
 	}
 
 	appOpts := &app.ApplicationOpts{
-		Port:        5555,
+		Port:        cfg.GRPC.Port,
 		StorageOpts: storageOpts,
 	}
 

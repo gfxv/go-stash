@@ -20,16 +20,16 @@ type Config struct {
 // see github.com/ilyakaznacheev/cleaner?tab=readme-ov-file#description
 
 type GRPCConfig struct {
-	Port     int           `yaml:"port" env:"PORT" env-default:"5555"`
-	Timeout  time.Duration `yaml:"timeout" env:"TIMEOUT" env-default:"10s"`
-	SyncNode string        `yaml:"sync-node" env:"SYNC_NODE"`
-	Nodes    []string      `yaml:"nodes" env:"NODES" env-separator:";"`
+	Port     int           `yaml:"port" env:"STASH_PORT" env-default:"5555"`
+	Timeout  time.Duration `yaml:"timeout" env:"STASH_TIMEOUT" env-default:"10s"`
+	SyncNode string        `yaml:"sync-node" env:"STASH_SYNC_NODE"`
+	Nodes    []string      `yaml:"nodes" env:"STASH_NODES" env-separator:";"`
 }
 
 type StorageConfig struct {
 	Path                       string `yaml:"path" env:"STASH_PATH" env-default:"./stash/"`
 	CompressionLevel           int    `yaml:"compression-level" env:"STASH_COMPRESSION_LEVEL" env-default:"0"` // TODO: <-- ???
-	AllowServerSideCompression bool   `yaml:"allow-server-side-compression" env:"ALLOW_SERVER_SIDE_COMPRESSION" env-default:"false"`
+	AllowServerSideCompression bool   `yaml:"allow-server-side-compression" env:"STASH_ALLOW_SERVER_SIDE_COMPRESSION" env-default:"false"`
 }
 
 func MustLoad() *Config {

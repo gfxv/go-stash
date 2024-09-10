@@ -2,7 +2,7 @@
 grpc:
   port: 1234
   timeout: "5s" # ???
-  sync-node: "sync-addr"
+  sync-node: "addr0"
   nodes:
     - "addr1"
     - "addr2"
@@ -10,7 +10,7 @@ grpc:
 
 # settings for cas
 cas:
-  path: "some-path" # path to stash cas on local machine
+  path: "stash" # path to stash cas on local machine
   compression-level: 1 # later...
   allow-server-side-compression: false
 
