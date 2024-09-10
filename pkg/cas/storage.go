@@ -39,6 +39,10 @@ type Storage struct {
 }
 
 func NewDefaultStorage(opts StorageOpts) (*Storage, error) {
+	if err := createBaseDir(opts.BaseDir); err != nil {
+		return nil, err
+	}
+
 	db, err := NewDB(opts.BaseDir)
 	if err != nil {
 		fmt.Println("storage.NewDefaultStorage")
@@ -52,6 +56,15 @@ func NewDefaultStorage(opts StorageOpts) (*Storage, error) {
 		Pack:          opts.Pack,
 		Unpack:        opts.Unpack,
 	}, nil
+}
+
+func createBaseDir(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.Mkdir(path, 0777); err != nil {
+			return fmt.Errorf("error occurred while creating the base directory: %s", err.Error())
+		}
+	}
+	return nil
 }
 
 func (s *Storage) Has(path string) bool {
