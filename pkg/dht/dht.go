@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net"
+	"sync"
 )
 
 type Node struct {
@@ -25,6 +26,7 @@ func HashKey(key string) int {
 }
 
 type HashRing struct {
+	mu    sync.Mutex
 	ids   []int
 	nodes map[int]*Node
 }
@@ -32,6 +34,7 @@ type HashRing struct {
 // NewHashRing creates empty HashRing
 func NewHashRing() *HashRing {
 	return &HashRing{
+		mu:    sync.Mutex{},
 		ids:   make([]int, 0),
 		nodes: make(map[int]*Node),
 	}
@@ -39,11 +42,12 @@ func NewHashRing() *HashRing {
 
 // AddNode adds node to Hash Ring
 func (h *HashRing) AddNode(nodes ...*Node) {
-	fmt.Println(nodes)
 	for _, node := range nodes {
 		nodeKey := HashKey(node.Addr.String())
+		h.mu.Lock()
 		h.insertId(nodeKey)
 		h.nodes[nodeKey] = node
+		h.mu.Unlock()
 	}
 }
 
@@ -57,6 +61,10 @@ func (h *HashRing) GetNodeForKey(key string) (*Node, error) {
 		return nil, fmt.Errorf("stash: DHT Node for key '%s' not found", key)
 	}
 	return node, nil
+}
+
+func (h *HashRing) GetNodes() map[int]*Node {
+	return h.nodes
 }
 
 func (h *HashRing) insertId(id int) {
