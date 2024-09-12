@@ -22,10 +22,11 @@ type Config struct {
 // see github.com/ilyakaznacheev/cleaner?tab=readme-ov-file#description
 
 type GRPCConfig struct {
-	Port     int           `yaml:"port" env:"STASH_PORT" env-default:"5555"`
-	Timeout  time.Duration `yaml:"timeout" env:"STASH_TIMEOUT" env-default:"10s"`
-	SyncNode string        `yaml:"sync-node" env:"STASH_SYNC_NODE"`
-	Nodes    []string      `yaml:"nodes" env:"STASH_NODES" env-separator:";"`
+	Port                int           `yaml:"port" env:"STASH_PORT" env-default:"5555"`
+	Timeout             time.Duration `yaml:"timeout" env:"STASH_TIMEOUT" env-default:"10s"`
+	HealthCheckInterval time.Duration `yaml:"health-check-interval" env:"STASH_HEALTH_CHECK_INTERVAL" env-default:"10s""`
+	SyncNode            string        `yaml:"sync-node" env:"STASH_SYNC_NODE"`
+	Nodes               []string      `yaml:"nodes" env:"STASH_NODES" env-separator:";"`
 }
 
 type StorageConfig struct {
