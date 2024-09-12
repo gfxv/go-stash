@@ -1,14 +1,12 @@
-# settings for grpc service
+env: "dev"
 grpc:
-  port: 1234
+  port: 5555
   timeout: "5s" # ???
-  sync-node: "addr0"
-  nodes:
-    - "addr1"
-    - "addr2"
-    - "addr3"
-
-# settings for cas
+  sync-node: ":5656"
+#  nodes:
+#    - ":5556"
+#    - ":5557"
+#    - ":5558"
 cas:
   path: "stash" # path to stash cas on local machine
   compression-level: 1 # later...

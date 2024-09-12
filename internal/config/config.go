@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"github.com/ilyakaznacheev/cleanenv"
+	"log/slog"
 	"os"
 	"time"
 )
@@ -12,6 +13,7 @@ var (
 )
 
 type Config struct {
+	Env     string        `yaml:"env" env:"STASH_ENV" env-default:"dev"`
 	GRPC    GRPCConfig    `yaml:"grpc"`
 	Storage StorageConfig `yaml:"cas"`
 }

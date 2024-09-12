@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"github.com/gfxv/go-stash/internal/config"
+	"github.com/gfxv/go-stash/pkg/slogger"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,10 +13,17 @@ import (
 	"github.com/gfxv/go-stash/pkg/cas"
 )
 
+const (
+	envDev  = "dev"
+	envProd = "prod"
+)
+
 func main() {
 
 	cfg := config.MustLoad()
-	fmt.Println(cfg)
+	logger := setupLogger(cfg.Env)
+
+	cfg.Validate(logger)
 
 	storageOpts := cas.StorageOpts{
 		BaseDir:  cfg.Storage.Path,
@@ -29,7 +37,7 @@ func main() {
 		StorageOpts: storageOpts,
 	}
 
-	application := app.NewApp(appOpts)
+	application := app.NewApp(logger, appOpts)
 
 	notifyReady := make(chan bool, 1)
 	go func() {
@@ -43,4 +51,28 @@ func main() {
 
 	application.GRPC.Stop()
 	log.Println("Gracefully stopped")
+}
+
+func setupLogger(env string) *slog.Logger {
+	var l *slog.Logger
+
+	switch env {
+	case envDev:
+		l = slog.New(slogger.NewSloggerHandler(
+			os.Stdout, slogger.SloggerHandlerOpts{
+				SlogOpts: slog.HandlerOptions{
+					AddSource: true,
+					Level:     slog.LevelDebug,
+				},
+			}))
+	case envProd:
+		l = slog.New(slogger.NewSloggerHandler(
+			os.Stdout, slogger.SloggerHandlerOpts{
+				SlogOpts: slog.HandlerOptions{
+					AddSource: true,
+					Level:     slog.LevelDebug,
+				},
+			}))
+	}
+	return l
 }
