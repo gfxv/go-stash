@@ -142,8 +142,13 @@ func (s *serverAPI) ReceiveChunks(
 
 // SyncNodes ...
 func (s *serverAPI) SyncNodes(_ *emptypb.Empty, stream gen.Transporter_SyncNodesServer) error {
-	// read nodes from file or dht
-	// stream response
+	nodes := s.dhtService.GetNodes()
+	for _, node := range nodes {
+		nodeInfo := &gen.NodeInfo{Address: node.Addr.String()}
+		if err := stream.Send(nodeInfo); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
