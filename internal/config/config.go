@@ -64,3 +64,9 @@ func parseConfigPath() string {
 	}
 	return path
 }
+
+func (c *Config) Validate(logger *slog.Logger) {
+	if len(c.GRPC.Nodes) == 0 && c.GRPC.SyncNode == "" {
+		logger.Warn("Nodes and SyncNode are not configured")
+	}
+}
