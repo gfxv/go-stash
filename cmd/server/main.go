@@ -33,16 +33,24 @@ func main() {
 	}
 
 	appOpts := &app.ApplicationOpts{
-		Port:        cfg.GRPC.Port,
+		GRPCOpts:    cfg.GRPC,
 		StorageOpts: storageOpts,
 	}
 
 	application := app.NewApp(logger, appOpts)
 
-	notifyReady := make(chan bool, 1)
+	notifyReady := make(chan bool, 2)
 	go func() {
 		application.GRPC.MustRun(notifyReady)
 	}()
+
+	<-notifyReady
+
+	go func() {
+		application.Sender.MustRun(notifyReady)
+	}()
+
+	<-notifyReady
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

@@ -8,7 +8,6 @@ import (
 	"github.com/gfxv/go-stash/internal/grpc/healthchecker"
 	"github.com/gfxv/go-stash/internal/grpc/transporter"
 	"github.com/gfxv/go-stash/internal/services"
-	"github.com/gfxv/go-stash/pkg/cas"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -16,15 +15,13 @@ import (
 type App struct {
 	grpcServer *grpc.Server
 	port       int
-
-	storage cas.Storage
 }
 
 // New creates new gRPC server app
-func New(port int, storage *services.StorageService) *App {
+func New(port int, storage *services.StorageService, dht *services.DHTService) *App {
 	server := grpc.NewServer()
 	healthchecker.Register(server)
-	transporter.Register(server, storage)
+	transporter.Register(server, storage, dht)
 
 	reflection.Register(server)
 
