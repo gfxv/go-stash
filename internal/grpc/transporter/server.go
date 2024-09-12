@@ -16,10 +16,14 @@ import (
 type serverAPI struct {
 	gen.UnimplementedTransporterServer
 	storageService *services.StorageService
+	dhtService     *services.DHTService
 }
 
-func Register(gRPC *grpc.Server, storageService *services.StorageService) {
-	gen.RegisterTransporterServer(gRPC, &serverAPI{storageService: storageService})
+func Register(gRPC *grpc.Server, storageService *services.StorageService, dhtService *services.DHTService) {
+	gen.RegisterTransporterServer(gRPC, &serverAPI{
+		storageService: storageService,
+		dhtService:     dhtService,
+	})
 }
 
 // SendChunks receives a stream of file chunks (or whole file)
