@@ -54,5 +54,6 @@ message ReceiveChunkResponse {
 
 message NodeInfo {
   string address = 1;
+  bool alive = 2;
   // ... ?
 }
