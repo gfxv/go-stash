@@ -34,6 +34,14 @@ func (s *DHTService) LoadNodesFromList(nodes []string) error {
 	return nil
 }
 
+func (s *DHTService) AddNode(node *dht.Node) {
+	s.ring.AddNode(node)
+}
+
+func (s *DHTService) NodeExists(key string) bool {
+	return s.ring.NodeExists(key)
+}
+
 func (s *DHTService) GetNodes() map[int]*dht.Node {
 	return s.ring.GetNodes()
 }

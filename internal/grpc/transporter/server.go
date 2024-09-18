@@ -6,11 +6,13 @@ import (
 	gen "github.com/gfxv/go-stash/api"
 	"github.com/gfxv/go-stash/internal/services"
 	"github.com/gfxv/go-stash/pkg/cas"
+	"github.com/gfxv/go-stash/pkg/dht"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"io"
+	"net"
 )
 
 type serverAPI struct {
@@ -160,6 +162,20 @@ func (s *serverAPI) AnnounceNewNode(
 	ctx context.Context,
 	newNode *gen.NodeInfo,
 ) (*emptypb.Empty, error) {
+
+	// check if node exists
+	if s.dhtService.NodeExists(newNode.GetAddress()) { // node already exists in hash ring
+		return nil, status.Errorf(codes.AlreadyExists, "node already exists in DHT")
+	}
+
+	// add node to the hash ring
+	addr, err := net.ResolveTCPAddr("tcp", newNode.GetAddress())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "can't resolve address: %v", err)
+	}
+
+	s.dhtService.AddNode(dht.NewNode(addr))
+
 	return nil, nil
 }
 
