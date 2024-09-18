@@ -9,7 +9,9 @@ import (
 )
 
 var (
-	syncNodes = flag.Bool("sync", false, "")
+	configPath  = flag.String("config", "", "path to config file")
+	syncNodes   = flag.Bool("sync", false, "allow sync node request")
+	announceNew = flag.Bool("announce-new", false, "allow announce new node request")
 )
 
 type Config struct {
@@ -27,6 +29,8 @@ type GRPCConfig struct {
 	HealthCheckInterval time.Duration `yaml:"health-check-interval" env:"STASH_HEALTH_CHECK_INTERVAL" env-default:"10s""`
 	SyncNode            string        `yaml:"sync-node" env:"STASH_SYNC_NODE"`
 	Nodes               []string      `yaml:"nodes" env:"STASH_NODES" env-separator:";"`
+
+	AnnounceNewNode bool
 }
 
 type StorageConfig struct {
@@ -36,6 +40,8 @@ type StorageConfig struct {
 }
 
 func MustLoad() *Config {
+	flag.Parse()
+
 	configPath := parseConfigPath()
 	if configPath == "" {
 		panic("config path is empty")
@@ -50,19 +56,16 @@ func MustLoad() *Config {
 		panic("can not read config file: " + err.Error())
 	}
 
+	cfg.GRPC.AnnounceNewNode = *announceNew
+
 	return &cfg
 }
 
 func parseConfigPath() string {
-	path := ""
-
-	flag.StringVar(&path, "config", "", "path to config file")
-	flag.Parse()
-
-	if path == "" {
-		path = os.Getenv("CONFIG_PATH")
+	if *configPath == "" {
+		*configPath = os.Getenv("CONFIG_PATH")
 	}
-	return path
+	return *configPath
 }
 
 func (c *Config) Validate(logger *slog.Logger) {
