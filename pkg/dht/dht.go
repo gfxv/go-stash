@@ -63,6 +63,13 @@ func (h *HashRing) GetNodeForKey(key string) (*Node, error) {
 	return node, nil
 }
 
+// NodeExists returns true if node exists in hash ring, false otherwise
+func (h *HashRing) NodeExists(key string) bool {
+	hashedKey := HashKey(key)
+	_, ok := h.nodes[hashedKey]
+	return ok
+}
+
 func (h *HashRing) GetNodes() map[int]*Node {
 	return h.nodes
 }
