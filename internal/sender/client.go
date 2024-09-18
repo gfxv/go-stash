@@ -2,10 +2,10 @@ package sender
 
 import (
 	"context"
-	"fmt"
 	"github.com/gfxv/go-stash/internal/services"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"io"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
@@ -23,15 +23,21 @@ const maxWorkerCount = 8
 type SenderOpts struct {
 	SyncNode      string
 	CheckInterval time.Duration
+	Logger        *slog.Logger
 }
 
 type Client struct {
 	opts       *SenderOpts
 	dhtService *services.DHTService
+	logger     *slog.Logger
 }
 
 func NewClient(opts *SenderOpts, dhtService *services.DHTService) *Client {
-	return &Client{opts: opts, dhtService: dhtService}
+	return &Client{
+		opts:       opts,
+		dhtService: dhtService,
+		logger:     opts.Logger,
+	}
 }
 
 func (c *Client) Serve(notifyReady chan<- bool) error {
@@ -46,8 +52,6 @@ func (c *Client) Serve(notifyReady chan<- bool) error {
 		}
 	}
 
-	// mb run in goroutine ?
-
 	notifyReady <- true
 
 	c.healthcheckLoop()
@@ -61,7 +65,9 @@ func (c *Client) healthcheckLoop() {
 		if len(nodes) == 0 {
 			continue
 		}
-		_ = c.CheckHealthDispatcher(nodes) // returns channel
+		c.logger.Debug("starting HC dispatcher")
+		_ = c.checkHealthDispatcher(nodes) // returns channel
+		c.logger.Debug("done health checking")
 	}
 }
 
@@ -76,7 +82,6 @@ func (c *Client) LoadNodesFromSync(syncNode *dht.Node) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	fmt.Println("making request")
 	stream, err := client.SyncNodes(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
@@ -98,7 +103,7 @@ func (c *Client) LoadNodesFromSync(syncNode *dht.Node) error {
 	return c.dhtService.LoadNodesFromList(nodes)
 }
 
-func (c *Client) CheckHealthDispatcher(nodes map[int]*dht.Node) <-chan *dht.Node {
+func (c *Client) checkHealthDispatcher(nodes map[int]*dht.Node) <-chan *dht.Node {
 	jobs := make(chan *dht.Node, len(nodes))
 	result := make(chan *dht.Node, len(nodes))
 	for _, node := range nodes {
@@ -124,18 +129,20 @@ func (c *Client) checkHealthWorker(wg *sync.WaitGroup, jobs <-chan *dht.Node, re
 	defer wg.Done()
 
 	for node := range jobs {
-		err := makeHealthCheckRequest(node)
+		err := c.makeHealthCheckRequest(node)
 		node.Alive = err == nil
 		result <- node
 	}
 }
 
-func makeHealthCheckRequest(node *dht.Node) error {
+func (c *Client) makeHealthCheckRequest(node *dht.Node) error {
 	conn, err := grpc.NewClient(node.Addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
+
+	c.logger.Debug("requesting node health status", slog.String("address", node.Addr.String()))
 
 	client := gen.NewHealthCheckerClient(conn)
 	_, err = client.Healthcheck(context.Background(), &emptypb.Empty{})

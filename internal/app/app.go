@@ -38,11 +38,16 @@ func NewApp(logger *slog.Logger, opts *ApplicationOpts) *App {
 	senderOpts := sender.SenderOpts{
 		CheckInterval: opts.GRPCOpts.HealthCheckInterval,
 		SyncNode:      opts.GRPCOpts.SyncNode,
+		Logger:        logger,
 	}
 	senderApp := senderapp.New(&senderOpts, dhtService)
 
 	storageService := services.NewStorageService(storage)
-	grpcApp := grpcapp.New(opts.GRPCOpts.Port, storageService, dhtService)
+	grpcOpts := grpcapp.GRPCOpts{
+		Port:   opts.GRPCOpts.Port,
+		Logger: logger,
+	}
+	grpcApp := grpcapp.New(&grpcOpts, storageService, dhtService)
 
 	return &App{
 		GRPC:   grpcApp,

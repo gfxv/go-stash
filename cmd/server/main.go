@@ -68,7 +68,7 @@ func setupLogger(env string) *slog.Logger {
 	case envDev:
 		l = slog.New(slogger.NewSloggerHandler(
 			os.Stdout, slogger.SloggerHandlerOpts{
-				SlogOpts: slog.HandlerOptions{
+				SlogOpts: &slog.HandlerOptions{
 					AddSource: true,
 					Level:     slog.LevelDebug,
 				},
@@ -76,9 +76,9 @@ func setupLogger(env string) *slog.Logger {
 	case envProd:
 		l = slog.New(slogger.NewSloggerHandler(
 			os.Stdout, slogger.SloggerHandlerOpts{
-				SlogOpts: slog.HandlerOptions{
+				SlogOpts: &slog.HandlerOptions{
 					AddSource: true,
-					Level:     slog.LevelDebug,
+					Level:     slog.LevelInfo,
 				},
 			}))
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 type SloggerHandlerOpts struct {
-	SlogOpts slog.HandlerOptions
+	SlogOpts *slog.HandlerOptions
 }
 
 type SloggerHandler struct {
@@ -22,7 +22,6 @@ func (h *SloggerHandler) Handle(ctx context.Context, r slog.Record) error {
 	fields := make(map[string]interface{}, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
 		fields[a.Key] = a.Value.Any()
-
 		return true
 	})
 	b, err := json.MarshalIndent(fields, "", "  ")
@@ -39,7 +38,7 @@ func (h *SloggerHandler) Handle(ctx context.Context, r slog.Record) error {
 
 func NewSloggerHandler(out io.Writer, opts SloggerHandlerOpts) *SloggerHandler {
 	h := &SloggerHandler{
-		Handler: slog.NewJSONHandler(out, &opts.SlogOpts),
+		Handler: slog.NewJSONHandler(out, opts.SlogOpts),
 		l:       log.New(out, "", 0),
 	}
 	return h

@@ -1,16 +1,24 @@
 package grpcapp
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 
 	"github.com/gfxv/go-stash/internal/grpc/healthchecker"
 	"github.com/gfxv/go-stash/internal/grpc/transporter"
 	"github.com/gfxv/go-stash/internal/services"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
+
+type GRPCOpts struct {
+	Port   int
+	Logger *slog.Logger
+}
 
 type App struct {
 	grpcServer *grpc.Server
@@ -18,17 +26,34 @@ type App struct {
 }
 
 // New creates new gRPC server app
-func New(port int, storage *services.StorageService, dht *services.DHTService) *App {
-	server := grpc.NewServer()
+func New(opts *GRPCOpts, storage *services.StorageService, dht *services.DHTService) *App {
+
+	logOpts := []logging.Option{
+		logging.WithLogOnEvents(
+			logging.StartCall, logging.FinishCall,
+			logging.PayloadReceived, logging.PayloadSent,
+		),
+	}
+
+	server := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		logging.UnaryServerInterceptor(InterceptorLogger(opts.Logger), logOpts...),
+	))
 	healthchecker.Register(server)
 	transporter.Register(server, storage, dht)
 
 	reflection.Register(server)
 
 	return &App{
-		port:       port,
+		port:       opts.Port,
 		grpcServer: server,
 	}
+}
+
+// InterceptorLogger adapts slog logger to interceptor logger.
+func InterceptorLogger(l *slog.Logger) logging.Logger {
+	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
+		l.Log(ctx, slog.Level(lvl), msg, fields...)
+	})
 }
 
 // MustRun runs gRPC server and panics if any error occurs

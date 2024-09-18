@@ -21,3 +21,4 @@ tasks:
     cmds:
       - go get -u google.golang.org/grpc
       - go get -u github.com/ilyakaznacheev/cleanenv
+      - go get -u github.com/grpc-ecosystem/go-grpc-middleware/v2
