@@ -36,8 +36,10 @@ func NewApp(logger *slog.Logger, opts *ApplicationOpts) *App {
 	}
 	dhtService := services.NewDHTService(ring)
 	senderOpts := sender.SenderOpts{
+		Port:          opts.GRPCOpts.Port,
 		CheckInterval: opts.GRPCOpts.HealthCheckInterval,
 		SyncNode:      opts.GRPCOpts.SyncNode,
+		AnnounceNew:   opts.GRPCOpts.AnnounceNewNode,
 		Logger:        logger,
 	}
 	senderApp := senderapp.New(&senderOpts, dhtService)

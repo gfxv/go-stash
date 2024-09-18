@@ -2,6 +2,7 @@ package sender
 
 import (
 	"context"
+	"fmt"
 	"github.com/gfxv/go-stash/internal/services"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"io"
@@ -21,7 +22,9 @@ const minWorkerCount = 1
 const maxWorkerCount = 8
 
 type SenderOpts struct {
+	Port          int
 	SyncNode      string
+	AnnounceNew   bool
 	CheckInterval time.Duration
 	Logger        *slog.Logger
 }
@@ -52,6 +55,17 @@ func (c *Client) Serve(notifyReady chan<- bool) error {
 		}
 	}
 
+	if c.opts.AnnounceNew {
+		addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", c.opts.Port))
+		if err != nil {
+			return err
+		}
+		if err := c.AnnounceNewNode(dht.NewNode(addr)); err != nil {
+			c.logger.Error("error occurred while announcing new node", slog.Any("error", err.Error()))
+			return err
+		}
+	}
+
 	notifyReady <- true
 
 	c.healthcheckLoop()
@@ -59,16 +73,42 @@ func (c *Client) Serve(notifyReady chan<- bool) error {
 	return nil
 }
 
-func (c *Client) healthcheckLoop() {
-	for range time.Tick(c.opts.CheckInterval) {
-		nodes := c.dhtService.GetNodes()
-		if len(nodes) == 0 {
-			continue
-		}
-		c.logger.Debug("starting HC dispatcher")
-		_ = c.checkHealthDispatcher(nodes) // returns channel
-		c.logger.Debug("done health checking")
+func (c *Client) AnnounceNewNode(node *dht.Node) error {
+	if len(c.dhtService.GetNodes()) == 0 {
+		return fmt.Errorf("cannot announce new node, Hash Ring is empty")
 	}
+
+	nodes := c.dhtService.GetNodes()
+	for _, targetNode := range nodes {
+		if err := c.newNodeRequest(node, targetNode); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Client) newNodeRequest(node, targetNode *dht.Node) error {
+	conn, err := grpc.NewClient(targetNode.Addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	client := gen.NewTransporterClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	nodeInfo := &gen.NodeInfo{
+		Address: node.Addr.String(),
+		Alive:   false,
+	}
+
+	_, err = client.AnnounceNewNode(ctx, nodeInfo)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Client) LoadNodesFromSync(syncNode *dht.Node) error {
@@ -101,6 +141,18 @@ func (c *Client) LoadNodesFromSync(syncNode *dht.Node) error {
 	}
 
 	return c.dhtService.LoadNodesFromList(nodes)
+}
+
+func (c *Client) healthcheckLoop() {
+	for range time.Tick(c.opts.CheckInterval) {
+		nodes := c.dhtService.GetNodes()
+		if len(nodes) == 0 {
+			continue
+		}
+		c.logger.Debug("starting HC dispatcher")
+		_ = c.checkHealthDispatcher(nodes) // returns channel
+		c.logger.Debug("done health checking")
+	}
 }
 
 func (c *Client) checkHealthDispatcher(nodes map[int]*dht.Node) <-chan *dht.Node {
