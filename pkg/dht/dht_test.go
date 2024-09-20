@@ -36,7 +36,7 @@ func TestGetNodeForKey(t *testing.T) {
 func TestFindInsertIndexEmptyArr(t *testing.T) {
 	arr := make([]int, 0)
 	target := 12
-	result := findInsertIndex(arr, target)
+	result := findIndex(arr, target)
 	assert.Zero(t, result)
 }
 
@@ -44,7 +44,7 @@ func TestFindInsertIndex(t *testing.T) {
 	arr := []int{1, 4, 7, 12, 13, 17}
 	target := 10
 	expected := 2 // index
-	result := findInsertIndex(arr, target)
+	result := findIndex(arr, target)
 	assert.Equal(t, expected, result)
 }
 
@@ -56,8 +56,8 @@ func TestFindInsertIndexDistance(t *testing.T) {
 
 	expected := 3
 
-	result1 := findInsertIndex(arr1, target1)
-	result2 := findInsertIndex(arr2, target2)
+	result1 := findIndex(arr1, target1)
+	result2 := findIndex(arr2, target2)
 
 	assert.Equal(t, expected, result1)
 	assert.Equal(t, expected, result2)

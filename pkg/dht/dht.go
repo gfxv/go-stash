@@ -79,7 +79,7 @@ func (h *HashRing) insertId(id int) {
 		h.ids = append(h.ids, id)
 		return
 	}
-	newIdPos := findInsertIndex(h.ids, id) + 1
+	newIdPos := findIndex(h.ids, id) + 1
 	newIds := make([]int, 0)
 	newIds = append(newIds, h.ids[:newIdPos]...) // append elements BEFORE new Id
 	newIds = append(newIds, id)                  // append Id
@@ -89,7 +89,7 @@ func (h *HashRing) insertId(id int) {
 
 // Example: arr = [1, 3, 8, 11, 19], target = 12, result = 3
 // Example: arr = [1, 3, 8, 11, 19], target = 18, result = 3
-func findInsertIndex(arr []int, target int) int {
+func findIndex(arr []int, target int) int {
 	n := len(arr)
 
 	// base cases
