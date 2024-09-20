@@ -39,14 +39,15 @@ type Storage struct {
 }
 
 func NewDefaultStorage(opts StorageOpts) (*Storage, error) {
+	const op = "cas.storage.NewDefaultStorage"
+
 	if err := createBaseDir(opts.BaseDir); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	db, err := NewDB(opts.BaseDir)
 	if err != nil {
-		fmt.Println("storage.NewDefaultStorage")
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return &Storage{
@@ -59,9 +60,11 @@ func NewDefaultStorage(opts StorageOpts) (*Storage, error) {
 }
 
 func createBaseDir(path string) error {
+	const op = "cas.storage.createBaseDir"
+
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err := os.Mkdir(path, 0777); err != nil {
-			return fmt.Errorf("error occurred while creating the base directory: %s", err.Error())
+			return fmt.Errorf("%s: error occurred while creating the base directory: %w", op, err)
 		}
 	}
 	return nil
@@ -79,33 +82,37 @@ func (s *Storage) AddNewPath(key string, hash string) error {
 
 // Store receives path (or multiple paths) to file or directory that should be saved on the disk
 func (s *Storage) Store(key string, paths ...string) error {
+	const op = "cas.storage.Store"
+
 	var err error
 	// transformedKey := transformKey(key)
 	for _, p := range paths {
 		tree, err := NewTree(p)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", op, err)
 		}
 		err = s.saveTree(key, tree)
 	}
-	return err
+	return fmt.Errorf("%s: %w", op, err)
 }
 
 // saveTree saves files to the disk and adds hashed paths to sqlite database
 func (s *Storage) saveTree(key string, tree []string) error {
+	const op = "cas.storage.saveTree"
+
 	var err error
 	paths := make([]string, 0)
 	for _, t := range tree {
 		file, err := os.ReadFile(t)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", op, err)
 		}
 		data := PrepareRawFile(t, file)
 		path, err := s.WriteFromRawData(data)
 		paths = append(paths, path)
 	}
 	err = s.db.Add(key, paths)
-	return err
+	return fmt.Errorf("%s: %w", op, err)
 }
 
 // PrepareRawFile adds a special header to the beginning of a file
@@ -118,15 +125,17 @@ func PrepareRawFile(path string, data []byte) []byte {
 
 // Write writes given Data to the disk
 func (s *Storage) Write(path string, data []byte) error {
+	const op = "cas.storage.Write"
+
 	file, err := os.Create(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 	defer file.Close()
 
 	_, err = io.Copy(file, bytes.NewReader(data))
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil
@@ -134,10 +143,12 @@ func (s *Storage) Write(path string, data []byte) error {
 
 // WriteFromRawData ...
 func (s *Storage) WriteFromRawData(data []byte) (string, error) {
+	const op = "cas.storage.WriteFromRawData"
+
 	prefix, filename := s.transformPath(data)
 	folders := filepath.Join(s.baseDir, prefix)
 	if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
-		return "", err
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	fullPath := filepath.Join(folders, filename)
@@ -149,7 +160,7 @@ func (s *Storage) WriteFromRawData(data []byte) (string, error) {
 	compressed := s.Pack(data)
 	err := s.Write(fullPath, compressed)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	return prefix + filename, nil
@@ -160,17 +171,21 @@ func (s *Storage) MakePathFromHash(hash string) string {
 }
 
 func (s *Storage) PrepareParentFolders(fullPath string) error {
+	const op = "cas.storage.PrepareParentFolders"
+
 	parents := filepath.Dir(fullPath)
 	if err := os.MkdirAll(parents, os.ModePerm); err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
 }
 
 func (s *Storage) Get(key string) ([]*File, error) {
+	const op = "cas.storage.Get"
+
 	hashes, err := s.db.GetByKey(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	files := make([]*File, 0)
@@ -178,7 +193,7 @@ func (s *Storage) Get(key string) ([]*File, error) {
 		path := filepath.Join(s.baseDir, hash[:PREFIX_LENGTH], hash[PREFIX_LENGTH:])
 		file, err := s.read(path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 		files = append(files, file)
 	}
@@ -187,22 +202,26 @@ func (s *Storage) Get(key string) ([]*File, error) {
 
 // GetByHash returns file content in bytes
 func (s *Storage) GetByHash(hash string) ([]byte, error) {
+	const op = "cas.storage.GetByHash"
+
 	path := filepath.Join(s.baseDir, hash[:PREFIX_LENGTH], hash[PREFIX_LENGTH:])
 	compressed, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	return compressed, nil
 }
 
 func (s *Storage) read(path string) (*File, error) {
+	const op = "cas.storage.read"
+
 	compressed, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	file, err := s.Unpack(compressed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	var originalPath string
@@ -224,10 +243,12 @@ func (s *Storage) read(path string) (*File, error) {
 // RecreateTree ...
 // TODO: probably return []error (?)
 func RecreateTree(path string, files []*File) error {
+	const op = "cas.storage.RecreateTree"
+
 	// create destination folder if it does not exist
 	if !PathExists(path) {
 		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
 
@@ -237,13 +258,13 @@ func RecreateTree(path string, files []*File) error {
 			// (?) TODO: add some flag that allows overriding files
 			err := compareFileContent(fullPath, &file.Data)
 			if err != nil {
-				return err
+				return fmt.Errorf("%s: %w", op, err)
 			}
 			continue
 		}
 		err := createFile(fullPath, &file.Data)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
 	return nil
@@ -252,9 +273,11 @@ func RecreateTree(path string, files []*File) error {
 // compareFileContent compares content (raw bytes) of two files.
 // Returns error if contents are not equal, otherwise - nil
 func compareFileContent(path string, data *[]byte) error {
+	const op = "cas.storage.compareFileContent"
+
 	f, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 	if bytes.Equal(f, *data) {
 		return nil
@@ -264,16 +287,18 @@ func compareFileContent(path string, data *[]byte) error {
 
 // createFile ...
 func createFile(path string, data *[]byte) error {
+	const op = "cas.storage.createFile"
+
 	parent := filepath.Dir(path)
 	if !PathExists(parent) {
 		if err := os.MkdirAll(parent, os.ModePerm); err != nil {
-			return err
+			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
 
 	file, err := os.Create(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 	defer func(file *os.File) {
 		tmpErr := file.Close()
@@ -285,9 +310,9 @@ func createFile(path string, data *[]byte) error {
 	// TODO: add logging ?
 	_, err = file.Write(*data)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
-	return err
+	return nil
 }
 
 func (s *Storage) GetHashesByKey(key string) ([]string, error) {

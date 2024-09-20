@@ -3,6 +3,7 @@ package cas
 import (
 	"bytes"
 	"compress/zlib"
+	"fmt"
 	"io"
 )
 
@@ -20,15 +21,17 @@ func ZLibPack(data []byte) []byte {
 }
 
 func ZLibUnpack(data []byte) ([]byte, error) {
+	const op = "cas.packer.ZLibUnpack"
+
 	b := bytes.NewReader(data)
 	r, err := zlib.NewReader(b)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	var result bytes.Buffer
 	if _, err = io.Copy(&result, r); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return result.Bytes(), nil

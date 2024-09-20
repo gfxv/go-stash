@@ -16,17 +16,18 @@ type DB struct {
 }
 
 func NewDB(root string) (*DB, error) {
-	//fullPath := fmt.Sprintf("%s/%s", root, DB_PATH)
+	const op = "cas.db.NewDB"
+
 	fullPath := filepath.Join(root, DB_PATH)
 	database, err := sql.Open(DB_DRIVER, fullPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	db := &DB{
 		database: database,
 	}
 	err = db.init()
-	return db, err
+	return db, fmt.Errorf("%s: %w", op, err)
 }
 
 func (db *DB) init() (err error) {
@@ -48,6 +49,8 @@ func (db *DB) init() (err error) {
 
 // Add adds key-hash records to database
 func (db *DB) Add(key string, hashes []string) error {
+	const op = "cas.db.Add"
+
 	stmtStr := "insert into keys (key, hash) values"
 	var vals []interface{}
 	for _, h := range hashes {
@@ -57,7 +60,7 @@ func (db *DB) Add(key string, hashes []string) error {
 	stmtStr = strings.TrimSuffix(stmtStr, ",")
 	stmt, err := db.database.Prepare(stmtStr)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 	defer func(stmt *sql.Stmt) {
 		if tmpErr := stmt.Close(); tmpErr != nil {
@@ -67,18 +70,20 @@ func (db *DB) Add(key string, hashes []string) error {
 
 	_, err = stmt.Exec(vals...)
 
-	return err
+	return fmt.Errorf("%s: %w", op, err)
 }
 
 // GetByKey returns hashes associated with given key
 func (db *DB) GetByKey(key string) ([]string, error) {
+	const op = "cas.db.GetByKey"
+
 	rows, err := db.database.Query("select hash from keys where key = ?", key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	defer func(rows *sql.Rows) {
 		if tmpErr := rows.Close(); tmpErr != nil {
-			err = tmpErr
+			err = fmt.Errorf("%s: %w", op, tmpErr)
 		}
 	}(rows)
 
@@ -87,7 +92,7 @@ func (db *DB) GetByKey(key string) ([]string, error) {
 		var hash string
 		err = rows.Scan(&hash)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 		hashes = append(hashes, hash)
 	}

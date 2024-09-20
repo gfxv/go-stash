@@ -1,6 +1,7 @@
 package cas
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -12,11 +13,13 @@ type File struct {
 
 // NewTree creates directory hierarchy.
 func NewTree(root string) ([]string, error) {
+	const op = "cas.file.NewTree"
+
 	var err error
 	nodes := make([]string, 0)
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", op, err)
 		}
 		if info.IsDir() {
 			return nil
@@ -26,10 +29,10 @@ func NewTree(root string) ([]string, error) {
 		return nil
 	}
 	if err = filepath.Walk(root, walkFunc); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return nodes, err
+	return nodes, fmt.Errorf("%s: %w", op, err)
 }
 
 // IsDir reports whether path describes a directory.
