@@ -29,7 +29,10 @@ func Register(gRPC *grpc.Server, storageService *services.StorageService, dhtSer
 	})
 }
 
-func (s *serverAPI) GetDestination(ctx context.Context, keyRequest *gen.KeyRequest) (*gen.NodeInfo, error) {
+func (s *serverAPI) GetDestination(
+	ctx context.Context,
+	keyRequest *gen.KeyRequest,
+) (*gen.NodeInfo, error) {
 	key := keyRequest.GetKey()
 	if len(key) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "key is empty")
@@ -195,7 +198,7 @@ func (s *serverAPI) AnnounceNewNode(
 		return nil, status.Errorf(codes.Internal, "can't resolve address: %v", err)
 	}
 
-	s.dhtService.AddNode(dht.NewNode(addr))
+	s.dhtService.AddNode(dht.NewNode(addr)) // return err ?
 
 	return nil, nil
 }
@@ -205,5 +208,17 @@ func (s *serverAPI) AnnounceRemoveNode(
 	ctx context.Context,
 	deadNode *gen.NodeInfo,
 ) (*emptypb.Empty, error) {
+
+	if !s.dhtService.NodeExists(deadNode.GetAddress()) {
+		return nil, status.Errorf(codes.NotFound, "node does not exist in DHT")
+	}
+
+	addr, err := net.ResolveTCPAddr("tcp", deadNode.GetAddress())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "can't resolve address: %v", err)
+	}
+
+	s.dhtService.RemoveNode(dht.NewNode(addr)) // return err ?
+
 	return nil, nil
 }

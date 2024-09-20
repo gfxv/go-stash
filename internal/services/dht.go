@@ -2,7 +2,6 @@ package services
 
 import (
 	"github.com/gfxv/go-stash/pkg/dht"
-	"log/slog"
 	"net"
 )
 
@@ -38,6 +37,10 @@ func (s *DHTService) AddNode(node *dht.Node) {
 	s.ring.AddNode(node)
 }
 
+func (s *DHTService) RemoveNode(node *dht.Node) {
+	s.ring.RemoveNode(node)
+}
+
 func (s *DHTService) GetNodeForKey(key string) (*dht.Node, error) {
 	return s.ring.GetNodeForKey(key)
 }
@@ -48,8 +51,4 @@ func (s *DHTService) NodeExists(key string) bool {
 
 func (s *DHTService) GetNodes() map[int]*dht.Node {
 	return s.ring.GetNodes()
-}
-
-func (s *DHTService) Status(logger *slog.Logger) {
-	// TODO: ?
 }

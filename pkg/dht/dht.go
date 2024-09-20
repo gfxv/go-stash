@@ -51,6 +51,17 @@ func (h *HashRing) AddNode(nodes ...*Node) {
 	}
 }
 
+func (h *HashRing) RemoveNode(nodes ...*Node) {
+	for _, node := range nodes {
+		nodeKey := HashKey(node.Addr.String())
+		index := findIndex(h.ids, nodeKey)
+		h.mu.Lock()
+		delete(h.nodes, nodeKey)
+		h.ids = append(h.ids[:index], h.ids[index+1:]...) // hmmm...
+		h.mu.Unlock()
+	}
+}
+
 // GetNodeForKey returns Node corresponding to given key.
 // Error can occur if Node is not found
 func (h *HashRing) GetNodeForKey(key string) (*Node, error) {
