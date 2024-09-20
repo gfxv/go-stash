@@ -5,6 +5,7 @@ import "google/protobuf/empty.proto";
 
 service Transporter {
   rpc SendChunks(stream Chunk) returns (StreamStatus);
+  rpc GetDestination(KeyRequest) returns (NodeInfo);
   rpc ReceiveInfo(ReceiveInfoRequest) returns (ReceiveInfoResponse);
   rpc ReceiveChunks(ReceiveChunkRequest) returns (stream ReceiveChunkResponse);
   rpc SyncNodes(google.protobuf.Empty) returns (stream NodeInfo);
@@ -32,6 +33,10 @@ message Chunk {
 
 message StreamStatus {
   uint32 size = 1;
+}
+
+message KeyRequest {
+  string key = 1;
 }
 
 message ReceiveInfoRequest {
