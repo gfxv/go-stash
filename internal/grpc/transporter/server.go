@@ -3,6 +3,7 @@ package transporter
 import (
 	"bytes"
 	"context"
+	"fmt"
 	gen "github.com/gfxv/go-stash/api"
 	"github.com/gfxv/go-stash/internal/services"
 	"github.com/gfxv/go-stash/pkg/cas"
@@ -26,6 +27,26 @@ func Register(gRPC *grpc.Server, storageService *services.StorageService, dhtSer
 		storageService: storageService,
 		dhtService:     dhtService,
 	})
+}
+
+func (s *serverAPI) GetDestination(ctx context.Context, keyRequest *gen.KeyRequest) (*gen.NodeInfo, error) {
+	key := keyRequest.GetKey()
+	if len(key) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "key is empty")
+	}
+
+	node, err := s.dhtService.GetNodeForKey(key)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+	if !node.Alive {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("node corresponding for key '%s' is unavailable", key))
+	}
+
+	return &gen.NodeInfo{
+		Address: node.Addr.String(),
+		Alive:   node.Alive,
+	}, nil
 }
 
 // SendChunks receives a stream of file chunks (or whole file)

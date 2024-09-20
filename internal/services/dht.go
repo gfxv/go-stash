@@ -38,6 +38,10 @@ func (s *DHTService) AddNode(node *dht.Node) {
 	s.ring.AddNode(node)
 }
 
+func (s *DHTService) GetNodeForKey(key string) (*dht.Node, error) {
+	return s.ring.GetNodeForKey(key)
+}
+
 func (s *DHTService) NodeExists(key string) bool {
 	return s.ring.NodeExists(key)
 }
