@@ -27,10 +27,15 @@ func NewDB(root string) (*DB, error) {
 		database: database,
 	}
 	err = db.init()
-	return db, fmt.Errorf("%s: %w", op, err)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	return db, err
 }
 
 func (db *DB) init() (err error) {
+	const op = "cas.db.init"
+
 	stmt, err := db.database.Prepare("create table if not exists keys (" +
 		"id integer primary key autoincrement," +
 		"key text not null," +
@@ -39,11 +44,13 @@ func (db *DB) init() (err error) {
 	)
 	defer func(stmt *sql.Stmt) {
 		if tmpErr := stmt.Close(); tmpErr != nil {
-			fmt.Println(err)
-			err = tmpErr
+			err = fmt.Errorf("%s: %w", op, tmpErr)
 		}
 	}(stmt)
 	_, err = stmt.Exec()
+	if err != nil {
+		err = fmt.Errorf("%s: %w", op, err)
+	}
 	return
 }
 
