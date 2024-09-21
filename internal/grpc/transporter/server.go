@@ -22,7 +22,11 @@ type serverAPI struct {
 	dhtService     *services.DHTService
 }
 
-func Register(gRPC *grpc.Server, storageService *services.StorageService, dhtService *services.DHTService) {
+func Register(
+	gRPC *grpc.Server,
+	storageService *services.StorageService,
+	dhtService *services.DHTService,
+) {
 	gen.RegisterTransporterServer(gRPC, &serverAPI{
 		storageService: storageService,
 		dhtService:     dhtService,
