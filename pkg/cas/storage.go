@@ -146,18 +146,25 @@ func (s *Storage) WriteFromRawData(data []byte) (string, error) {
 	const op = "cas.storage.WriteFromRawData"
 
 	prefix, filename := s.transformPath(data)
+	compressed := s.Pack(data)
+
 	folders := filepath.Join(s.baseDir, prefix)
 	if err := os.MkdirAll(folders, os.ModePerm); err != nil { // TODO: change permissions (?), now - 777
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	fullPath := filepath.Join(folders, filename)
+	// check if file with given name (hash) exists and its content is different
 	if s.Has(fullPath) {
-		return "", fmt.Errorf("stash: collision detected! \n'%s/%s' already exists", prefix, filename)
+		if err := compareFileContent(fullPath, &compressed); err != nil {
+			return "", fmt.Errorf("%s: %w", op, err)
+		}
+		//return "", fmt.Errorf("stash: collision detected! \n'%s/%s' already exists", prefix, filename)
+		return prefix + filename, nil
 	}
 
 	// Write compressed data to cas
-	compressed := s.Pack(data)
+
 	err := s.Write(fullPath, compressed)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
