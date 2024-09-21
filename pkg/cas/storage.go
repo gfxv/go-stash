@@ -319,6 +319,59 @@ func (s *Storage) GetHashesByKey(key string) ([]string, error) {
 	return s.db.GetByKey(key)
 }
 
-func (s *Storage) Delete() {}
+// RemoveByKey removes all files that have same key
+func (s *Storage) RemoveByKey(key string) error {
+	const op = "cas.storage.RemoveByKey"
+
+	hashes, err := s.db.GetByKey(key)
+	if err != nil {
+		return fmt.Errorf("%s: %w", key, err)
+	}
+
+	for _, hash := range hashes {
+		err := s.RemoveByHash(hash)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	err = s.db.Remove(key)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+// RemoveByHash removes file with given hash
+func (s *Storage) RemoveByHash(hash string) error {
+	const op = "cas.storage.RemoveByHash"
+
+	fullPath := filepath.Join(s.baseDir, hash[:PREFIX_LENGTH], hash[PREFIX_LENGTH:])
+	if !s.Has(fullPath) {
+		return fmt.Errorf("%s: %w", op, os.ErrNotExist)
+	}
+
+	if err := os.Remove(fullPath); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	// remove parent directory if its empty
+	parent := filepath.Dir(fullPath)
+	dir, err := os.Open(parent)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	defer dir.Close()
+
+	_, err = dir.Readdirnames(1)
+	if err == io.EOF { // if directory is empty
+		if err := os.Remove(parent); err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	return nil
+}
 
 func (s *Storage) DeleteAll() {}

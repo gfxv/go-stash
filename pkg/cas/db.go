@@ -111,4 +111,20 @@ func (db *DB) GetByKey(key string) ([]string, error) {
 }
 
 // Remove TODO
-func (db *DB) Remove(key string) error { return nil }
+func (db *DB) Remove(key string) error {
+	const op = "cas.db.Remove"
+
+	stmt, err := db.database.Prepare("delete from keys where key = ?")
+	defer func(stmt *sql.Stmt) {
+		if tmpErr := stmt.Close(); tmpErr != nil {
+			err = fmt.Errorf("%s: %w", op, tmpErr)
+		}
+	}(stmt)
+
+	_, err = stmt.Exec(key)
+	if err != nil {
+		err = fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
