@@ -76,8 +76,11 @@ func (db *DB) Add(key string, hashes []string) error {
 	}(stmt)
 
 	_, err = stmt.Exec(vals...)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 
-	return fmt.Errorf("%s: %w", op, err)
+	return nil
 }
 
 // GetByKey returns hashes associated with given key
