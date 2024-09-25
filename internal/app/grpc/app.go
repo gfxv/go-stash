@@ -3,6 +3,9 @@ package grpcapp
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"log"
 	"log/slog"
 	"net"
@@ -35,9 +38,18 @@ func New(opts *GRPCOpts, storage *services.StorageService, dht *services.DHTServ
 		),
 	}
 
+	recoveryOpts := []recovery.Option{
+		recovery.WithRecoveryHandler(func(p any) error {
+			opts.Logger.Error("recovered from panic", slog.Any("panic", p))
+			return status.Errorf(codes.Internal, "internal error")
+		}),
+	}
+
 	server := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		recovery.UnaryServerInterceptor(recoveryOpts...),
 		logging.UnaryServerInterceptor(InterceptorLogger(opts.Logger), logOpts...),
 	))
+
 	healthchecker.Register(server)
 	transporter.Register(server, storage, dht)
 
