@@ -34,20 +34,25 @@ func NewApp(logger *slog.Logger, opts *ApplicationOpts) *App {
 	if len(errs) != 0 {
 		utils.HandleFatal(logger, "can't load nodes from config", errs...)
 	}
+
+	notifyRebase := make(chan bool)
+
+	storageService := services.NewStorageService(storage)
 	dhtService := services.NewDHTService(ring)
+
 	senderOpts := sender.SenderOpts{
 		Port:          opts.GRPCOpts.Port,
 		CheckInterval: opts.GRPCOpts.HealthCheckInterval,
 		SyncNode:      opts.GRPCOpts.SyncNode,
 		AnnounceNew:   opts.GRPCOpts.AnnounceNewNode,
 		Logger:        logger,
+		NotifyRebase:  notifyRebase,
 	}
-	senderApp := senderapp.New(&senderOpts, dhtService)
-
-	storageService := services.NewStorageService(storage)
+	senderApp := senderapp.New(&senderOpts, storageService, dhtService)
 	grpcOpts := grpcapp.GRPCOpts{
-		Port:   opts.GRPCOpts.Port,
-		Logger: logger,
+		Port:         opts.GRPCOpts.Port,
+		Logger:       logger,
+		NotifyRebase: notifyRebase,
 	}
 	grpcApp := grpcapp.New(&grpcOpts, storageService, dhtService)
 

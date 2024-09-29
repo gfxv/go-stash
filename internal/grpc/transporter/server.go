@@ -20,16 +20,20 @@ type serverAPI struct {
 	gen.UnimplementedTransporterServer
 	storageService *services.StorageService
 	dhtService     *services.DHTService
+
+	notifyRebase chan<- bool
 }
 
 func Register(
 	gRPC *grpc.Server,
 	storageService *services.StorageService,
 	dhtService *services.DHTService,
+	notifyRebase chan<- bool,
 ) {
 	gen.RegisterTransporterServer(gRPC, &serverAPI{
 		storageService: storageService,
 		dhtService:     dhtService,
+		notifyRebase:   notifyRebase,
 	})
 }
 
@@ -183,6 +187,13 @@ func (s *serverAPI) SyncNodes(_ *emptypb.Empty, stream gen.Transporter_SyncNodes
 		}
 	}
 	return nil
+}
+
+// Rebase ...
+func (s *serverAPI) Rebase(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+	// anything other than that ???
+	s.notifyRebase <- true
+	return nil, nil
 }
 
 // AnnounceNewNode ...

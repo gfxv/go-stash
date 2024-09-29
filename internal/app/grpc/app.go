@@ -21,6 +21,8 @@ import (
 type GRPCOpts struct {
 	Port   int
 	Logger *slog.Logger
+
+	NotifyRebase chan<- bool
 }
 
 type App struct {
@@ -51,7 +53,7 @@ func New(opts *GRPCOpts, storage *services.StorageService, dht *services.DHTServ
 	))
 
 	healthchecker.Register(server)
-	transporter.Register(server, storage, dht)
+	transporter.Register(server, storage, dht, opts.NotifyRebase)
 
 	reflection.Register(server)
 

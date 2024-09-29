@@ -11,8 +11,8 @@ type App struct {
 	checkInterval time.Duration
 }
 
-func New(opts *sender.SenderOpts, dht *services.DHTService) *App {
-	c := sender.NewClient(opts, dht)
+func New(opts *sender.SenderOpts, storage *services.StorageService, dht *services.DHTService) *App {
+	c := sender.NewClient(opts, storage, dht)
 	return &App{sender: c}
 }
 

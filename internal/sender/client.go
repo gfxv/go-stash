@@ -1,13 +1,16 @@
 package sender
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"github.com/gfxv/go-stash/internal/services"
+	"github.com/gfxv/go-stash/pkg/cas"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"io"
 	"log/slog"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -21,29 +24,46 @@ const workerRatio = 3
 const minWorkerCount = 1
 const maxWorkerCount = 8
 
+// for more info: https://github.com/grpc/grpc.github.io/issues/371
+const fileChunkSize = 32 * 1024 // 32 KiB
+
 type SenderOpts struct {
 	Port          int
 	SyncNode      string
 	AnnounceNew   bool
 	CheckInterval time.Duration
-	Logger        *slog.Logger
+
+	Logger *slog.Logger
+
+	NotifyRebase <-chan bool
 }
 
 type Client struct {
-	opts       *SenderOpts
-	dhtService *services.DHTService
-	logger     *slog.Logger
+	opts   *SenderOpts
+	logger *slog.Logger
+
+	storageService *services.StorageService
+	dhtService     *services.DHTService
 }
 
-func NewClient(opts *SenderOpts, dhtService *services.DHTService) *Client {
+func NewClient(
+	opts *SenderOpts,
+	storageService *services.StorageService,
+	dhtService *services.DHTService,
+) *Client {
 	return &Client{
-		opts:       opts,
-		dhtService: dhtService,
-		logger:     opts.Logger,
+		opts:   opts,
+		logger: opts.Logger,
+
+		storageService: storageService,
+		dhtService:     dhtService,
 	}
 }
 
 func (c *Client) Serve(notifyReady chan<- bool) error {
+
+	// TODO: break this into smaller parts
+
 	if c.opts.SyncNode != "" {
 		addr, err := net.ResolveTCPAddr("tcp", c.opts.SyncNode)
 		if err != nil {
@@ -68,7 +88,15 @@ func (c *Client) Serve(notifyReady chan<- bool) error {
 
 	notifyReady <- true
 
-	c.healthcheckLoop()
+	go func() {
+		c.healthcheckLoop()
+	}()
+
+	go func() {
+		for range c.opts.NotifyRebase {
+			fmt.Println("rebase caught")
+		}
+	}()
 
 	return nil
 }
@@ -205,11 +233,6 @@ func (c *Client) makeHealthCheckRequest(node *dht.Node) error {
 }
 
 func calcWorkerCount(nodesCount int) int {
-	// or make like:
-	// workerCount = max(workerCount, minCount)
-	// workerCount = min(workerCount, maxCount)
-	// ??????????
-
 	workerCount := nodesCount / workerRatio
 	if workerCount > maxWorkerCount {
 		return maxWorkerCount
