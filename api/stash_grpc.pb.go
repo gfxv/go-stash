@@ -25,6 +25,7 @@ const (
 	Transporter_ReceiveInfo_FullMethodName        = "/Transporter/ReceiveInfo"
 	Transporter_ReceiveChunks_FullMethodName      = "/Transporter/ReceiveChunks"
 	Transporter_SyncNodes_FullMethodName          = "/Transporter/SyncNodes"
+	Transporter_Rebase_FullMethodName             = "/Transporter/Rebase"
 	Transporter_AnnounceNewNode_FullMethodName    = "/Transporter/AnnounceNewNode"
 	Transporter_AnnounceRemoveNode_FullMethodName = "/Transporter/AnnounceRemoveNode"
 )
@@ -38,6 +39,7 @@ type TransporterClient interface {
 	ReceiveInfo(ctx context.Context, in *ReceiveInfoRequest, opts ...grpc.CallOption) (*ReceiveInfoResponse, error)
 	ReceiveChunks(ctx context.Context, in *ReceiveChunkRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ReceiveChunkResponse], error)
 	SyncNodes(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[NodeInfo], error)
+	Rebase(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AnnounceNewNode(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AnnounceRemoveNode(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
@@ -121,6 +123,16 @@ func (c *transporterClient) SyncNodes(ctx context.Context, in *emptypb.Empty, op
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Transporter_SyncNodesClient = grpc.ServerStreamingClient[NodeInfo]
 
+func (c *transporterClient) Rebase(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Transporter_Rebase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *transporterClient) AnnounceNewNode(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -150,6 +162,7 @@ type TransporterServer interface {
 	ReceiveInfo(context.Context, *ReceiveInfoRequest) (*ReceiveInfoResponse, error)
 	ReceiveChunks(*ReceiveChunkRequest, grpc.ServerStreamingServer[ReceiveChunkResponse]) error
 	SyncNodes(*emptypb.Empty, grpc.ServerStreamingServer[NodeInfo]) error
+	Rebase(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	AnnounceNewNode(context.Context, *NodeInfo) (*emptypb.Empty, error)
 	AnnounceRemoveNode(context.Context, *NodeInfo) (*emptypb.Empty, error)
 	mustEmbedUnimplementedTransporterServer()
@@ -176,6 +189,9 @@ func (UnimplementedTransporterServer) ReceiveChunks(*ReceiveChunkRequest, grpc.S
 }
 func (UnimplementedTransporterServer) SyncNodes(*emptypb.Empty, grpc.ServerStreamingServer[NodeInfo]) error {
 	return status.Errorf(codes.Unimplemented, "method SyncNodes not implemented")
+}
+func (UnimplementedTransporterServer) Rebase(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Rebase not implemented")
 }
 func (UnimplementedTransporterServer) AnnounceNewNode(context.Context, *NodeInfo) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AnnounceNewNode not implemented")
@@ -269,6 +285,24 @@ func _Transporter_SyncNodes_Handler(srv interface{}, stream grpc.ServerStream) e
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Transporter_SyncNodesServer = grpc.ServerStreamingServer[NodeInfo]
 
+func _Transporter_Rebase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransporterServer).Rebase(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Transporter_Rebase_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransporterServer).Rebase(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Transporter_AnnounceNewNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NodeInfo)
 	if err := dec(in); err != nil {
@@ -319,6 +353,10 @@ var Transporter_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReceiveInfo",
 			Handler:    _Transporter_ReceiveInfo_Handler,
+		},
+		{
+			MethodName: "Rebase",
+			Handler:    _Transporter_Rebase_Handler,
 		},
 		{
 			MethodName: "AnnounceNewNode",

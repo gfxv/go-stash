@@ -9,6 +9,7 @@ service Transporter {
   rpc ReceiveInfo(ReceiveInfoRequest) returns (ReceiveInfoResponse);
   rpc ReceiveChunks(ReceiveChunkRequest) returns (stream ReceiveChunkResponse);
   rpc SyncNodes(google.protobuf.Empty) returns (stream NodeInfo);
+  rpc Rebase(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc AnnounceNewNode(NodeInfo) returns (google.protobuf.Empty);
   rpc AnnounceRemoveNode(NodeInfo) returns (google.protobuf.Empty);
 }
