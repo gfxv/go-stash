@@ -139,6 +139,181 @@ func (c *Client) newNodeRequest(node, targetNode *dht.Node) error {
 	return nil
 }
 
+func (c *Client) handleRebaseSignal() error {
+	offset := 0
+	for {
+		keys, err := c.storageService.GetKeysByChunks(offset)
+		if err != nil {
+			return err
+		}
+
+		rebaseInfo, err := c.checkForRebase(keys)
+		if err != nil {
+			return err
+		}
+
+		if err := c.copyStorage(rebaseInfo); err != nil {
+			return err
+		}
+
+		if err = c.removeKeys(rebaseInfo); err != nil {
+			return err
+		}
+
+		if len(keys) < cas.DB_CHUNK_SIZE {
+			break
+		}
+		offset += cas.DB_CHUNK_SIZE
+	}
+	return nil
+}
+
+func (c *Client) copyStorage(rebaseInfo map[string]*dht.Node) error {
+	for key, node := range rebaseInfo {
+		if err := c.rebaseByKeyAndNode(key, node); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Client) checkForRebase(keys []string) (map[string]*dht.Node, error) {
+	rebaseInfo := make(map[string]*dht.Node)
+	selfAddr := fmt.Sprintf(":%d", c.opts.Port)
+
+	for _, key := range keys {
+		node, err := c.dhtService.GetNodeForKey(key)
+		if err != nil {
+			return nil, err
+		}
+		if !node.Alive {
+			return nil, fmt.Errorf("node %v is not alive", node)
+		}
+
+		c.logger.Debug("Checking key for rebase",
+			slog.String("key", key),
+			slog.String("self address", selfAddr),
+			slog.String("node address", node.Addr.String()),
+		)
+
+		if selfAddr == node.Addr.String() {
+			continue
+		}
+		rebaseInfo[key] = node
+	}
+
+	return rebaseInfo, nil
+}
+
+func (c *Client) rebaseByKeyAndNode(key string, node *dht.Node) error {
+	conn, err := grpc.NewClient(node.Addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	client := gen.NewTransporterClient(conn)
+
+	hashes, err := c.storageService.GetHashesByKey(key)
+	if err != nil {
+		return err
+	}
+
+	for _, hash := range hashes {
+		if err := c.sendFile(client, key, hash); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) sendFile(
+	client gen.TransporterClient,
+	key, hash string,
+) error {
+	path := c.storageService.MakePathFromHash(hash)
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// use WithTimeout + timeout depends on file size ?
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stream, err := client.SendChunks(ctx)
+	if err != nil {
+		return err
+	}
+
+	initRequest := makeSendChunksInitRequestBody(key, hash)
+	if err = stream.Send(initRequest); err != nil {
+		return err
+	}
+
+	if err = streamFileByChunks(file, stream); err != nil {
+		return err
+	}
+
+	if _, err = stream.CloseAndRecv(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func streamFileByChunks(
+	file *os.File,
+	stream grpc.ClientStreamingClient[gen.Chunk, gen.StreamStatus],
+) error {
+	reader := bufio.NewReader(file)
+	buffer := make([]byte, fileChunkSize)
+	for {
+		n, err := reader.Read(buffer)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		chunk := &gen.Chunk{
+			Data: &gen.Chunk_ChunkData{
+				ChunkData: buffer[:n],
+			},
+		}
+
+		if err = stream.Send(chunk); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func makeSendChunksInitRequestBody(key, hash string) *gen.Chunk {
+	return &gen.Chunk{
+		Data: &gen.Chunk_Meta{
+			Meta: &gen.Chunk_FileMetadata{
+				Key:         key,
+				ContentHash: &hash,
+				FilePath:    nil,
+				Compressed:  true,
+			},
+		},
+	}
+}
+
+func (c *Client) removeKeys(info map[string]*dht.Node) error {
+	for key := range info {
+		if err := c.storageService.RemoveByKey(key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *Client) LoadNodesFromSync(syncNode *dht.Node) error {
 	conn, err := grpc.NewClient(syncNode.Addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
