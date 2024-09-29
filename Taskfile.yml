@@ -15,10 +15,3 @@ tasks:
     cmds:
       - go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
       - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-
-  install-app-deps:
-    desc: "Install required dependencies for running app"
-    cmds:
-      - go get -u google.golang.org/grpc
-      - go get -u github.com/ilyakaznacheev/cleanenv
-      - go get -u github.com/grpc-ecosystem/go-grpc-middleware/v2
