@@ -11,6 +11,9 @@ import (
 const DB_PATH = "meta.db"
 const DB_DRIVER = "sqlite3"
 
+// TODO: move it to config file
+const DB_CHUNK_SIZE = 100
+
 type DB struct {
 	database *sql.DB
 }
@@ -110,8 +113,30 @@ func (db *DB) GetByKey(key string) ([]string, error) {
 	return hashes, err
 }
 
-// Remove TODO
-func (db *DB) Remove(key string) error {
+func (db *DB) GetKeysByChunks(offset int) ([]string, error) {
+	const op = "cas.db.GetKeysByChunks"
+
+	rows, err := db.database.Query("select distinct key from keys limit ? offset ?", DB_CHUNK_SIZE, offset)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer rows.Close()
+
+	keys := make([]string, 0)
+	for rows.Next() {
+		var key string
+		err = rows.Scan(&key)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+		keys = append(keys, key)
+	}
+
+	return keys, nil
+}
+
+// RemoveByKey ...
+func (db *DB) RemoveByKey(key string) error {
 	const op = "cas.db.Remove"
 
 	stmt, err := db.database.Prepare("delete from keys where key = ?")

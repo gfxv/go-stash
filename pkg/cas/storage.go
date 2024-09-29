@@ -342,7 +342,7 @@ func (s *Storage) RemoveByKey(key string) error {
 		}
 	}
 
-	err = s.db.Remove(key)
+	err = s.db.RemoveByKey(key)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -382,3 +382,7 @@ func (s *Storage) RemoveByHash(hash string) error {
 }
 
 func (s *Storage) DeleteAll() {}
+
+func (s *Storage) GetKeysByChunks(offset int) ([]string, error) {
+	return s.db.GetKeysByChunks(offset)
+}
