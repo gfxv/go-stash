@@ -67,3 +67,15 @@ func (s *StorageService) GetFileDataByHash(hash string, needDecompression bool) 
 
 	return s.storage.Unpack(compressed)
 }
+
+func (s *StorageService) GetKeysByChunks(offset int) ([]string, error) {
+	return s.storage.GetKeysByChunks(offset)
+}
+
+func (s *StorageService) MakePathFromHash(hash string) string {
+	return s.storage.MakePathFromHash(hash)
+}
+
+func (s *StorageService) RemoveByKey(key string) error {
+	return s.storage.RemoveByKey(key)
+}
