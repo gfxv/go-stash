@@ -1,8 +1,8 @@
 package cas
 
 import (
+	"github.com/gfxv/go-stash/internal/utils"
 	"github.com/stretchr/testify/assert"
-	"log"
 	"os"
 	"testing"
 )
@@ -18,20 +18,9 @@ func sampleStorage(baseDir string) (*Storage, error) {
 	return NewDefaultStorage(opts)
 }
 
-func cleanUp(path string) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return
-	}
-
-	err := os.RemoveAll(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func TestSaveDuplicate(t *testing.T) {
 	const root = "stash-test"
-	defer cleanUp(root)
+	defer utils.CleanUp(root)
 
 	storage, err := sampleStorage(root)
 	assert.NotNil(t, storage)
@@ -53,7 +42,7 @@ func TestSaveDuplicate(t *testing.T) {
 
 func TestRemoveByKey(t *testing.T) {
 	const root = "stash-test"
-	defer cleanUp(root)
+	defer utils.CleanUp(root)
 
 	storage, err := sampleStorage(root)
 	assert.NotNil(t, storage)
@@ -81,7 +70,7 @@ func TestRemoveByKey(t *testing.T) {
 
 func TestRemoveByKeyNonExisting(t *testing.T) {
 	const root = "stash-test"
-	defer cleanUp(root)
+	defer utils.CleanUp(root)
 
 	storage, err := sampleStorage(root)
 	assert.NotNil(t, storage)
@@ -98,7 +87,7 @@ func TestRemoveByKeyNonExisting(t *testing.T) {
 
 func TestRemoveByHash(t *testing.T) {
 	const root = "stash-test"
-	defer cleanUp(root)
+	defer utils.CleanUp(root)
 
 	storage, err := sampleStorage(root)
 	assert.NotNil(t, storage)
@@ -117,7 +106,7 @@ func TestRemoveByHash(t *testing.T) {
 
 func TestRemoveByHashNonExisting(t *testing.T) {
 	const root = "stash-test"
-	defer cleanUp(root)
+	defer utils.CleanUp(root)
 
 	storage, err := sampleStorage(root)
 	assert.NotNil(t, storage)
