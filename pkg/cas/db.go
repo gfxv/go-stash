@@ -2,6 +2,7 @@ package cas
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"path/filepath"
@@ -61,9 +62,20 @@ func (db *DB) init() (err error) {
 func (db *DB) Add(key string, hashes []string) error {
 	const op = "cas.db.Add"
 
+	if len(key) == 0 {
+		return fmt.Errorf("%s: %w", op, errors.New("empty key"))
+	}
+
+	if len(hashes) == 0 {
+		return fmt.Errorf("%s: %w", op, errors.New("empty hash list"))
+	}
+
 	stmtStr := "insert into keys (key, hash) values"
 	var vals []interface{}
 	for _, h := range hashes {
+		if len(h) == 0 {
+			return fmt.Errorf("%s: %w", op, errors.New("empty hash"))
+		}
 		stmtStr += " (?, ?),"
 		vals = append(vals, key, h)
 	}
