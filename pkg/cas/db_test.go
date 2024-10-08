@@ -56,15 +56,7 @@ func TestDB_Add(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = db.Add(tt.key, tt.hashes)
-			if err != nil && tt.expectedErr != nil && err.Error() != tt.expectedErr.Error() {
-				t.Errorf("Expected error: %v, got: %v", tt.expectedErr, err)
-			}
-			if err == nil && tt.expectedErr != nil {
-				t.Errorf("Expected error: %v, got: nil", tt.expectedErr)
-			}
-			if err != nil && tt.expectedErr == nil {
-				t.Errorf("Expected no error, got: %v", err)
-			}
+			utils.CheckError(t, tt.expectedErr, err)
 		})
 	}
 }
