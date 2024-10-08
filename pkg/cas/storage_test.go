@@ -1,6 +1,7 @@
 package cas
 
 import (
+	"errors"
 	"github.com/gfxv/go-stash/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -40,45 +41,70 @@ func TestSaveDuplicate(t *testing.T) {
 // RemoveByKey //
 //=============//
 
-func TestRemoveByKey(t *testing.T) {
-	const root = "stash-test"
-	defer utils.CleanUp(root)
-
-	storage, err := sampleStorage(root)
-	assert.NotNil(t, storage)
-	assert.NoError(t, err)
-
-	const key = "test_key"
-
-	hash, err := storage.WriteFromRawData([]byte("some data 1"))
-	assert.NoError(t, err)
-	err = storage.AddNewPath(key, hash)
-	assert.NoError(t, err)
-
-	hash, err = storage.WriteFromRawData([]byte("some data 2"))
-	assert.NoError(t, err)
-	err = storage.AddNewPath(key, hash)
-	assert.NoError(t, err)
-
-	err = storage.RemoveByKey(key)
-	assert.NoError(t, err)
-
-	hashes, err := storage.GetHashesByKey(key)
-	assert.NoError(t, err)
-	assert.Len(t, hashes, 0)
+func addSamples(s *Storage, key string, data [][]byte) error {
+	for _, d := range data {
+		hash, err := s.WriteFromRawData(d)
+		if err != nil {
+			return err
+		}
+		if err := s.AddNewPath(key, hash); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func TestRemoveByKeyNonExisting(t *testing.T) {
+func TestStorage_RemoveByKey(t *testing.T) {
 	const root = "stash-test"
+	utils.CreateParent(root)
 	defer utils.CleanUp(root)
 
-	storage, err := sampleStorage(root)
-	assert.NotNil(t, storage)
-	assert.NoError(t, err)
+	tests := []struct {
+		name        string
+		key         string
+		data        [][]byte
+		beforeFunc  func(s *Storage, key string, data [][]byte) error
+		expectedErr error
+	}{
+		{
+			name:        "Key exists",
+			key:         "test_key",
+			data:        [][]byte{[]byte("sample_hash1"), []byte("sample_hash2"), []byte("sample_hash3")},
+			beforeFunc:  addSamples,
+			expectedErr: nil,
+		},
+		{
+			name:        "Key does not exist",
+			key:         "test_key_not_exist",
+			data:        [][]byte{},
+			beforeFunc:  nil,
+			expectedErr: nil,
+		},
+		{
+			name:        "Empty key",
+			key:         "",
+			data:        [][]byte{},
+			beforeFunc:  nil, // it's impossible to save key-hash pair if key (or hash) is empty, so before func is nil
+			expectedErr: errors.New("cas.storage.RemoveByKey: empty key"),
+		},
+	}
 
-	const key = "test_key"
-	err = storage.RemoveByKey(key)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage, err := sampleStorage(root)
+			assert.NotNil(t, storage)
+			assert.NoError(t, err)
+
+			if tt.beforeFunc != nil {
+				err = tt.beforeFunc(storage, tt.key, tt.data)
+				assert.NoError(t, err)
+			}
+
+			err = storage.RemoveByKey(tt.key)
+			utils.CheckError(t, err, tt.expectedErr)
+
+		})
+	}
 }
 
 //==============//
