@@ -24,6 +24,7 @@ message Chunk {
     optional string content_hash = 2;
     optional string file_path = 3;
     bool compressed = 4;
+    bool replicate = 5;
   }
 
   oneof data {
