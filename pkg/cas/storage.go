@@ -330,6 +330,10 @@ func (s *Storage) GetHashesByKey(key string) ([]string, error) {
 func (s *Storage) RemoveByKey(key string) error {
 	const op = "cas.storage.RemoveByKey"
 
+	if len(key) == 0 {
+		return fmt.Errorf("%s: %w", op, errors.New("empty key"))
+	}
+
 	hashes, err := s.db.GetByKey(key)
 	if err != nil {
 		return fmt.Errorf("%s: %w", key, err)
