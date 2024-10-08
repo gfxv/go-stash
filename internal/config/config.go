@@ -36,7 +36,8 @@ type GRPCConfig struct {
 type StorageConfig struct {
 	Path                       string `yaml:"path" env:"STASH_PATH" env-default:"./stash/"`
 	CompressionLevel           int    `yaml:"compression-level" env:"STASH_COMPRESSION_LEVEL" env-default:"0"` // TODO: <-- ???
-	AllowServerSideCompression bool   `yaml:"allow-server-side-compression" env:"STASH_ALLOW_SERVER_SIDE_COMPRESSION" env-default:"false"`
+	ReplicationFactor          int    `yaml:"replication-factor" env:"STASH_REPLICATION_FACTOR" env-default:"0"`
+	AllowServerSideCompression bool   `yaml:"allow-server-side-compression" env:"STASH_ALLOW_SERVER_SIDE_COMPRESSION" env-default:"false"` // TODO: <-- ???
 }
 
 func MustLoad() *Config {

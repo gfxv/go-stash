@@ -10,6 +10,7 @@ grpc:
 cas:
   path: "stash" # path to stash cas on local machine
   compression-level: 1 # later...
+  replication-factor: 0 # how many times replicate
   allow-server-side-compression: false
 
 
