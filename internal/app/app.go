@@ -36,17 +36,20 @@ func NewApp(logger *slog.Logger, opts *ApplicationOpts) *App {
 	}
 
 	notifyRebase := make(chan bool)
+	replicationChan := make(chan *cas.KeyHashPair)
 
 	storageService := services.NewStorageService(storage)
 	dhtService := services.NewDHTService(ring)
 
 	senderOpts := sender.SenderOpts{
-		Port:          opts.GRPCOpts.Port,
-		CheckInterval: opts.GRPCOpts.HealthCheckInterval,
-		SyncNode:      opts.GRPCOpts.SyncNode,
-		AnnounceNew:   opts.GRPCOpts.AnnounceNewNode,
-		Logger:        logger,
-		NotifyRebase:  notifyRebase,
+		Port:              opts.GRPCOpts.Port,
+		CheckInterval:     opts.GRPCOpts.HealthCheckInterval,
+		SyncNode:          opts.GRPCOpts.SyncNode,
+		AnnounceNew:       opts.GRPCOpts.AnnounceNewNode,
+		ReplicationFactor: opts.StorageOpts.ReplicationFactor,
+		Logger:            logger,
+		NotifyRebase:      notifyRebase,
+		ReplicationChan:   replicationChan,
 	}
 	senderApp := senderapp.New(&senderOpts, storageService, dhtService)
 	grpcOpts := grpcapp.GRPCOpts{

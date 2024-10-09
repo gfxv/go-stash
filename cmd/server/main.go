@@ -26,10 +26,11 @@ func main() {
 	cfg.Validate(logger)
 
 	storageOpts := cas.StorageOpts{
-		BaseDir:  cfg.Storage.Path,
-		PathFunc: cas.DefaultTransformPathFunc,
-		Pack:     cas.ZLibPack,
-		Unpack:   cas.ZLibUnpack,
+		BaseDir:           cfg.Storage.Path,
+		PathFunc:          cas.DefaultTransformPathFunc,
+		Pack:              cas.ZLibPack,
+		Unpack:            cas.ZLibUnpack,
+		ReplicationFactor: cfg.Storage.ReplicationFactor,
 	}
 
 	appOpts := &app.ApplicationOpts{

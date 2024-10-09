@@ -23,10 +23,11 @@ func DefaultTransformPathFunc(data []byte) (prefix string, filename string) {
 }
 
 type StorageOpts struct {
-	BaseDir  string
-	PathFunc TransformPathFunc
-	Pack     PackFunc
-	Unpack   UnpackFunc
+	BaseDir           string
+	PathFunc          TransformPathFunc
+	Pack              PackFunc
+	Unpack            UnpackFunc
+	ReplicationFactor int // TODO: implement locally
 }
 
 type Storage struct {

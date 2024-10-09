@@ -3,6 +3,7 @@ package grpcapp
 import (
 	"context"
 	"fmt"
+	"github.com/gfxv/go-stash/pkg/cas"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,7 +23,8 @@ type GRPCOpts struct {
 	Port   int
 	Logger *slog.Logger
 
-	NotifyRebase chan<- bool
+	NotifyRebase    chan<- bool
+	ReplicationChan chan<- *cas.KeyHashPair
 }
 
 type App struct {
@@ -53,7 +55,7 @@ func New(opts *GRPCOpts, storage *services.StorageService, dht *services.DHTServ
 	))
 
 	healthchecker.Register(server)
-	transporter.Register(server, storage, dht, opts.NotifyRebase)
+	transporter.Register(server, storage, dht, opts.NotifyRebase, opts.ReplicationChan)
 
 	reflection.Register(server)
 

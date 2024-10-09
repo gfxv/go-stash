@@ -11,6 +11,11 @@ type File struct {
 	Data []byte
 }
 
+type KeyHashPair struct {
+	Key  string
+	Hash string
+}
+
 // NewTree creates directory hierarchy.
 func NewTree(root string) ([]string, error) {
 	const op = "cas.file.NewTree"
