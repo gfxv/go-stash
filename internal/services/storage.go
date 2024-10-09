@@ -34,17 +34,17 @@ func (s *StorageService) SaveCompressed(key string, contentHash string, data []b
 	return err
 }
 
-func (s *StorageService) SaveRaw(key string, file *cas.File) error {
+func (s *StorageService) SaveRaw(key string, file *cas.File) (string, error) {
 	data := cas.PrepareRawFile(file.Path, file.Data)
 	contentHash, err := s.storage.WriteFromRawData(data)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if err = s.storage.AddNewPath(key, contentHash); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return contentHash, nil
 }
 
 func (s *StorageService) GetHashesByKey(key string) ([]string, error) {
