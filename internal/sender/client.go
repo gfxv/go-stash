@@ -28,14 +28,16 @@ const maxWorkerCount = 8
 const fileChunkSize = 32 * 1024 // 32 KiB
 
 type SenderOpts struct {
-	Port          int
-	SyncNode      string
-	AnnounceNew   bool
-	CheckInterval time.Duration
+	Port              int
+	SyncNode          string
+	AnnounceNew       bool
+	CheckInterval     time.Duration
+	ReplicationFactor int
 
 	Logger *slog.Logger
 
-	NotifyRebase <-chan bool
+	NotifyRebase    <-chan bool
+	ReplicationChan <-chan *cas.KeyHashPair
 }
 
 type Client struct {
@@ -94,7 +96,19 @@ func (c *Client) Serve(notifyReady chan<- bool) error {
 
 	go func() {
 		for range c.opts.NotifyRebase {
-			fmt.Println("rebase caught")
+			if err := c.handleRebaseSignal(); err != nil {
+				c.logger.Error("error occurred while rebasing", slog.Any("error", err.Error()))
+			}
+		}
+	}()
+
+	go func() {
+		for keyHashPair := range c.opts.ReplicationChan {
+			fmt.Println("received replication signal")
+			fmt.Println("key hash pair: ", keyHashPair)
+			if err := c.handleReplication(keyHashPair); err != nil {
+				c.logger.Error("error occurred while replication", slog.Any("error", err.Error()))
+			}
 		}
 	}()
 
@@ -170,7 +184,7 @@ func (c *Client) handleRebaseSignal() error {
 
 func (c *Client) copyStorage(rebaseInfo map[string]*dht.Node) error {
 	for key, node := range rebaseInfo {
-		if err := c.rebaseByKeyAndNode(key, node); err != nil {
+		if err := c.rebaseHashesByKeyAndNode(key, node); err != nil {
 			return err
 		}
 	}
@@ -205,7 +219,7 @@ func (c *Client) checkForRebase(keys []string) (map[string]*dht.Node, error) {
 	return rebaseInfo, nil
 }
 
-func (c *Client) rebaseByKeyAndNode(key string, node *dht.Node) error {
+func (c *Client) rebaseHashesByKeyAndNode(key string, node *dht.Node) error {
 	conn, err := grpc.NewClient(node.Addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -221,6 +235,47 @@ func (c *Client) rebaseByKeyAndNode(key string, node *dht.Node) error {
 
 	for _, hash := range hashes {
 		if err := c.sendFile(client, key, hash); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) handleReplication(keyHashPair *cas.KeyHashPair) error {
+	getNextKey := nextKeyGenerator(keyHashPair.Key)
+	usedNodes := make(map[string]bool)
+	for range c.opts.ReplicationFactor {
+		key := getNextKey()
+		node, err := c.dhtService.GetNodeForKey(key)
+		if err != nil {
+			return err
+		}
+		if _, ok := usedNodes[node.Addr.String()]; ok {
+			continue
+		}
+
+		usedNodes[node.Addr.String()] = true
+
+		fmt.Println("key:", key)
+		fmt.Println("node:", node.Addr, node.Alive)
+
+		// костыль?
+		err = func() error {
+			conn, err := grpc.NewClient(node.Addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				return err
+			}
+			defer conn.Close()
+
+			client := gen.NewTransporterClient(conn)
+			if err = c.sendFile(client, key, keyHashPair.Hash); err != nil {
+				return err
+			}
+
+			return nil
+		}()
+		if err != nil {
 			return err
 		}
 	}
@@ -300,6 +355,7 @@ func makeSendChunksInitRequestBody(key, hash string) *gen.Chunk {
 				ContentHash: &hash,
 				FilePath:    nil,
 				Compressed:  true,
+				Replicate:   false,
 			},
 		},
 	}
@@ -415,4 +471,12 @@ func calcWorkerCount(nodesCount int) int {
 		return minWorkerCount
 	}
 	return workerCount
+}
+
+func nextKeyGenerator(key string) func() string {
+	nextKey := key
+	return func() string {
+		nextKey = nextKey + "_replica"
+		return nextKey
+	}
 }

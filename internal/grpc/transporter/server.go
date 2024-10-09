@@ -21,7 +21,8 @@ type serverAPI struct {
 	storageService *services.StorageService
 	dhtService     *services.DHTService
 
-	notifyRebase chan<- bool
+	notifyRebase    chan<- bool
+	replicationChan chan<- *cas.KeyHashPair // TODO: add replicationChan to app configuration !!!
 }
 
 func Register(
@@ -29,11 +30,13 @@ func Register(
 	storageService *services.StorageService,
 	dhtService *services.DHTService,
 	notifyRebase chan<- bool,
+	replicationChan chan<- *cas.KeyHashPair,
 ) {
 	gen.RegisterTransporterServer(gRPC, &serverAPI{
-		storageService: storageService,
-		dhtService:     dhtService,
-		notifyRebase:   notifyRebase,
+		storageService:  storageService,
+		dhtService:      dhtService,
+		notifyRebase:    notifyRebase,
+		replicationChan: replicationChan,
 	})
 }
 
@@ -94,8 +97,9 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 		}
 	}
 
+	var contentHash string
 	if compressed {
-		contentHash := req.GetMeta().GetContentHash()
+		contentHash = req.GetMeta().GetContentHash()
 		if len(contentHash) == 0 {
 			return status.Errorf(codes.InvalidArgument, "empty hash")
 		}
@@ -113,10 +117,19 @@ func (s *serverAPI) SendChunks(stream gen.Transporter_SendChunksServer) error {
 			Path: path,
 			Data: buffer.Bytes(),
 		}
-		err := s.storageService.SaveRaw(key, file)
+		contentHash, err = s.storageService.SaveRaw(key, file)
 		if err != nil {
 			return status.Errorf(codes.Internal, "can't save raw file: %v", err)
 		}
+	}
+
+	fmt.Println("replicate:", req.GetMeta().GetReplicate())
+	if req.GetMeta().GetReplicate() {
+		go func() { // костыль?
+			fmt.Println("sending signal to replication channel")
+			keyHashPair := &cas.KeyHashPair{Key: key, Hash: contentHash}
+			s.replicationChan <- keyHashPair
+		}()
 	}
 
 	return stream.SendAndClose(&gen.StreamStatus{

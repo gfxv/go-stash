@@ -53,9 +53,10 @@ func NewApp(logger *slog.Logger, opts *ApplicationOpts) *App {
 	}
 	senderApp := senderapp.New(&senderOpts, storageService, dhtService)
 	grpcOpts := grpcapp.GRPCOpts{
-		Port:         opts.GRPCOpts.Port,
-		Logger:       logger,
-		NotifyRebase: notifyRebase,
+		Port:            opts.GRPCOpts.Port,
+		Logger:          logger,
+		NotifyRebase:    notifyRebase,
+		ReplicationChan: replicationChan,
 	}
 	grpcApp := grpcapp.New(&grpcOpts, storageService, dhtService)
 
