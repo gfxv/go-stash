@@ -19,6 +19,13 @@ type DB struct {
 	database *sql.DB
 }
 
+// NewDB creates a new instance of DB and initializes the database connection.
+//
+// This method takes a root directory path, constructs the full path to the
+// database file, and attempts to open a connection to the database.
+// If the connection is successful, it initializes the database
+// and returns a pointer to the DB instance. In case of any errors during these
+// processes, an error is returned.
 func NewDB(root string) (*DB, error) {
 	const op = "cas.db.NewDB"
 
@@ -58,7 +65,13 @@ func (db *DB) init() (err error) {
 	return
 }
 
-// Add adds key-hash records to database
+// Add inserts key-hash records into the database.
+//
+// This method takes a key and a slice of hash strings and adds them to the
+// `keys` table in the database. It validates that the key and hashes are
+// not empty and constructs an SQL insert statement for the operation. If
+// any of the inputs are invalid or if an error occurs during the database
+// operations, an error is returned.
 func (db *DB) Add(key string, hashes []string) error {
 	const op = "cas.db.Add"
 
@@ -98,7 +111,12 @@ func (db *DB) Add(key string, hashes []string) error {
 	return nil
 }
 
-// GetByKey returns hashes associated with given key
+// GetByKey retrieves hashes associated with a given key from the database.
+//
+// This method takes a key as input and queries the `keys` table to retrieve
+// all associated hash values. If the query is successful, it returns a slice
+// of strings containing the hashes. If an error occurs during the query or
+// while scanning the results, an error is returned.
 func (db *DB) GetByKey(key string) ([]string, error) {
 	const op = "cas.db.GetByKey"
 
@@ -125,6 +143,13 @@ func (db *DB) GetByKey(key string) ([]string, error) {
 	return hashes, err
 }
 
+// GetKeysByChunks retrieves a chunk of distinct keys from the database.
+//
+// This method takes an offset as input and queries the `keys` table to fetch
+// a limited number of distinct keys based on the specified offset.
+// Chunk size is defined by DB_CHUNK_SIZE value.
+// If the query is successful, it returns a slice of strings containing the keys.
+// If an error occurs during the query or while scanning the results, an error is returned.
 func (db *DB) GetKeysByChunks(offset int) ([]string, error) {
 	const op = "cas.db.GetKeysByChunks"
 
@@ -147,7 +172,12 @@ func (db *DB) GetKeysByChunks(offset int) ([]string, error) {
 	return keys, nil
 }
 
-// RemoveByKey ...
+// RemoveByKey deletes all records associated with a given key from the database.
+//
+// This method takes a key as input and executes a delete operation on the
+// `keys` table, removing all entries that match the specified key. If an
+// error occurs during the preparation or execution of the SQL statement,
+// an error is returned.
 func (db *DB) RemoveByKey(key string) error {
 	const op = "cas.db.Remove"
 
