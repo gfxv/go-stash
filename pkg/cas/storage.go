@@ -39,6 +39,12 @@ type Storage struct {
 	Unpack UnpackFunc
 }
 
+// NewDefaultStorage creates a new instance of Storage.
+//
+// This function initializes the storage by creating the specified base directory,
+// setting up the database, and configuring any provided transformation functions
+// for paths. If any errors occur during the directory creation or database
+// initialization, an error is returned.
 func NewDefaultStorage(opts StorageOpts) (*Storage, error) {
 	const op = "cas.storage.NewDefaultStorage"
 
@@ -76,12 +82,22 @@ func (s *Storage) Has(path string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-// AddNewPath adds
+// AddNewPath adds a new key-hash record to the storage database.
+//
+// This method takes a key and a hash as input, and it invokes the
+// Add method of the underlying database to store the association
+// in the database. If an error occurs during the addition process,
+// it returns the error.
 func (s *Storage) AddNewPath(key string, hash string) error {
 	return s.db.Add(key, []string{hash})
 }
 
-// Store receives path (or multiple paths) to file or directory that should be saved on the disk
+// Store saves one or more file or directory paths to disk under the specified key.
+//
+// This method takes a key and a variable number of paths as input. It
+// creates a tree structure for each path and saves it in the storage
+// using the provided key. If any errors occur during the creation
+// of the tree or while saving, the method returns an error.
 func (s *Storage) Store(key string, paths ...string) error {
 	const op = "cas.storage.Store"
 
@@ -116,15 +132,24 @@ func (s *Storage) saveTree(key string, tree []string) error {
 	return fmt.Errorf("%s: %w", op, err)
 }
 
-// PrepareRawFile adds a special header to the beginning of a file
-// and returns new file's content as raw bytes
+// PrepareRawFile adds a special header to the beginning of a file's content
+// and returns the new content as raw bytes.
+//
+// This function takes a file path and the original file data as input. It
+// creates a header that consists of the file path followed by a null byte
+// (`\0`), and prepends this header to the original data. The resulting
+// byte slice containing the header and the original data is returned.
 func PrepareRawFile(path string, data []byte) []byte {
 	header := fmt.Sprintf("%s\u0000", path)     // header = Path + \0
 	prepared := append([]byte(header), data...) // prepared = header + Data (file content in bytes)
 	return prepared
 }
 
-// Write writes given Data to the disk
+// Write saves the given data to a file at the specified path on disk.
+//
+// This method takes a file path and the data to be written as input. It creates
+// a new file at the specified path and writes the provided data to it. If
+// any errors occur during file creation or writing, the method returns an error.
 func (s *Storage) Write(path string, data []byte) error {
 	const op = "cas.storage.Write"
 
@@ -142,7 +167,15 @@ func (s *Storage) Write(path string, data []byte) error {
 	return nil
 }
 
-// WriteFromRawData ...
+// WriteFromRawData writes the provided raw data to a file after
+// creating path and compressing the data.
+//
+// This method takes raw data as input, creates path based on data, and compresses
+// the data before saving it to disk. It ensures that the target directory
+// exists, creating it if necessary. If a file with the same name already
+// exists, it checks if the content is different to avoid overwriting.
+// The method returns the transformed path of the saved file or an error
+// if any operation fails.
 func (s *Storage) WriteFromRawData(data []byte) (string, error) {
 	const op = "cas.storage.WriteFromRawData"
 
@@ -174,6 +207,12 @@ func (s *Storage) WriteFromRawData(data []byte) (string, error) {
 	return prefix + filename, nil
 }
 
+// MakePathFromHash constructs a file path from a given hash.
+//
+// This method takes a hash string as input and creates a file path
+// by splitting the hash into two parts: the prefix and the remaining
+// characters. The resulting path is constructed by joining the base
+// directory with the prefix and the rest of the hash.
 func (s *Storage) MakePathFromHash(hash string) string {
 	return filepath.Join(s.baseDir, hash[:PREFIX_LENGTH], hash[PREFIX_LENGTH:])
 }
@@ -188,6 +227,12 @@ func (s *Storage) PrepareParentFolders(fullPath string) error {
 	return nil
 }
 
+// Get retrieves files associated with the given key from the storage.
+//
+// This method takes a key as input and fetches the associated hash values
+// from the database. It constructs file paths based on the hashes and reads
+// the corresponding files from disk. If any errors occur during the database
+// retrieval or file reading, the method returns an error.
 func (s *Storage) Get(key string) ([]*File, error) {
 	const op = "cas.storage.Get"
 
@@ -208,7 +253,11 @@ func (s *Storage) Get(key string) ([]*File, error) {
 	return files, nil
 }
 
-// GetByHash returns file content in bytes
+// GetByHash retrieves the content of a file as a byte slice using the provided hash.
+//
+// This method takes a hash string as input, constructs the file path based
+// on the hash, and reads the file's content from disk. If an error occurs
+// during the file reading process, the method returns an error.
 func (s *Storage) GetByHash(hash string) ([]byte, error) {
 	const op = "cas.storage.GetByHash"
 
@@ -248,8 +297,15 @@ func (s *Storage) read(path string) (*File, error) {
 	}, nil
 }
 
-// RecreateTree ...
-// TODO: probably return []error (?)
+// RecreateTree creates a directory structure and populates it with files
+// based on the provided files ([]*File).
+//
+// This method takes a destination path and a slice of File pointers.
+// It ensures that the destination folder exists, creating it if necessary.
+// For each file in the provided list, it constructs the full path and checks
+// if the file already exists. If it does, it compares the existing file's
+// content with the new data. If the contents differ, an error is returned.
+// If the file does not exist, it creates a new file with the provided data.
 func RecreateTree(path string, files []*File) error {
 	const op = "cas.storage.RecreateTree"
 
@@ -323,11 +379,23 @@ func createFile(path string, data *[]byte) error {
 	return nil
 }
 
+// GetHashesByKey retrieves hash values associated with the specified key.
+//
+// This method takes a key as input and queries the underlying database
+// to fetch the corresponding hash values. If the operation is successful,
+// it returns a slice of hashes; otherwise, it returns an error.
 func (s *Storage) GetHashesByKey(key string) ([]string, error) {
 	return s.db.GetByKey(key)
 }
 
-// RemoveByKey removes all files that have same key
+// RemoveByKey deletes all files associated with the specified key.
+//
+// This method takes a key as input and removes all files that are linked
+// to that key in the storage. It first checks if the key is empty, returning
+// an error if it is. Then, it retrieves the associated hash values from
+// the database and attempts to remove each file by its hash. If any
+// operation fails during this process, an error is returned. Finally,
+// the method removes the key entry from the database.
 func (s *Storage) RemoveByKey(key string) error {
 	const op = "cas.storage.RemoveByKey"
 
@@ -355,7 +423,14 @@ func (s *Storage) RemoveByKey(key string) error {
 	return nil
 }
 
-// RemoveByHash removes file with given hash
+// RemoveByHash deletes the file associated with the specified hash.
+//
+// This method takes a hash string as input and constructs the corresponding
+// file path. It first checks if the file exists; if it does not, it returns
+// an error. If the file exists, it attempts to remove the file from disk.
+// After removing the file, it checks if the parent directory is empty and
+// removes it if necessary. If any errors occur during these operations,
+// the method returns an error.
 func (s *Storage) RemoveByHash(hash string) error {
 	const op = "cas.storage.RemoveByHash"
 
