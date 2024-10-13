@@ -52,4 +52,19 @@ cas:
 
 ### Running
 
+To run Stash, run the program as follows:
+
+`./stash --config=./config.yml --sync=192.168.1.2:5555 --announce-new=true`
+
+Several launch parameters are available:
+
+| Parameter | Description |
+| --------- | ----------- |
+| `--config` | Specifies the path to a config file. Alternatively, path to the config can be specified in variable `STASH_CONFIG_PATH`. Useful if a single node is deployed in several configurations. |
+| `--sync` | _Optional_. Defines a specific node to synchronize (retrieve addresses of other nodes connected to it) with, similarly to `sync-node` in config. |
+| `--announce-new` | _Optional, `false` by default_. Accepts `true` or `false`. Defines whether or not the node should announce itself to other nodes to be added into their node lists.
+
+**Please note:** Launch arguments override both config and environment variables.
+
+
 ## Planned Features
