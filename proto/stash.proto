@@ -4,13 +4,37 @@ option go_package = "./api/;gen";
 import "google/protobuf/empty.proto";
 
 service Transporter {
+
+  // SendChunks is used to upload Chunks of data to the Stash. Recommended
+  // chunk size is 32Kb, for more info see: https://github.com/grpc/grpc.github.io/issues/371
   rpc SendChunks(stream Chunk) returns (StreamStatus);
+
+  // GetDestination uses KeyRequest to get information about a node where
+  // the data will be saved.
   rpc GetDestination(KeyRequest) returns (NodeInfo);
+
+  // ReceiveInfo returns a list of files stored under a certain key.
   rpc ReceiveInfo(ReceiveInfoRequest) returns (ReceiveInfoResponse);
+
+  // ReceiveChunks returns the file based on the supplied hash.
   rpc ReceiveChunks(ReceiveChunkRequest) returns (stream ReceiveChunkResponse);
+
+  // SyncNodes returns a list of nodes known by the target node.
   rpc SyncNodes(google.protobuf.Empty) returns (stream NodeInfo);
+
+  // Rebase will start a process of rebasing files.
+  // During rebase all the stored files will be checked on whether or not they should
+  // be stored on the current node. If not, the node will attempt to move the files
+  // to other nodes.
   rpc Rebase(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // AnnounceNewNode will make the target node announce the new NodeInfo to all the
+  // other nodes it's connected to. It is recommended to trigger rebase after adding
+  // a new node to re-distribute files.
   rpc AnnounceNewNode(NodeInfo) returns (google.protobuf.Empty);
+
+  // AnnounceRemoveNode will make the target node announce other nodes to stop
+  // connecting to a certain node.
   rpc AnnounceRemoveNode(NodeInfo) returns (google.protobuf.Empty);
 }
 
@@ -24,7 +48,6 @@ message Chunk {
     optional string content_hash = 2;
     optional string file_path = 3;
     bool compressed = 4;
-    bool replicate = 5;
   }
 
   oneof data {
