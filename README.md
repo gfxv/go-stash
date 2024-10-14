@@ -50,6 +50,11 @@ cas:
 | `allow-server-side-compression` | `STASH_ALLOW_SERVER_SIDE_COMPRESSION` | `false` | Accepts `true` or `false`. This flag determines whether server-side compression is permitted. |
 | `compression-level` | `STASH_COMPRESSION_LEVEL` | `0` | Defines the level of compression to be applied to the stored data (up to `4`). |
 
+#### Notes
+
+- Using server-side compression comes with increased CPU usage and increased amount of read/write operations. Please note that with high load this can significantly harm performance.
+- When creating a client to be used with **Stash**, implementing some form of compression before sending data to the storage is advisable to reduce disk space use without using server-side compression.
+
 ### Running
 
 To run Stash, run the program as follows:
