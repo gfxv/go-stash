@@ -71,5 +71,8 @@ Several launch parameters are available:
 
 **Please note:** Launch arguments override both config and environment variables.
 
+### API (gRPC)
+
+For more information, please see `./proto/stash.proto`.
 
 ## Planned Features
