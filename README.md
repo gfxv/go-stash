@@ -78,3 +78,8 @@ Several launch parameters are available:
 For more information, please see `./proto/stash.proto`.
 
 ## Planned Features
+- [ ] Implementing authorization
+- [ ] Making storing, modifying and deleting transactional
+- [ ] Minimal CLI Client
+- [ ] Support adding names to nodes
+- [ ] Making nodes added via API persistent after a graceful shutdown.
