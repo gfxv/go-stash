@@ -13,6 +13,8 @@ To build **Stash** from source:
 
 ## Usage
 
+> **When using Stash it's highly recommended to use a VPN and to not expose Stash to the Internet.**
+
 ### Configuration
 
 You can configure **Stash** both using the config file or by using environment variables. **Please note that environment variables override values specified in the config.**
@@ -82,4 +84,4 @@ For more information, please see `./proto/stash.proto`.
 - [ ] Making storing, modifying and deleting transactional
 - [ ] Minimal CLI Client
 - [ ] Support adding names to nodes
-- [ ] Making nodes added via API persistent after a graceful shutdown.
+- [ ] Making nodes added via API persistent after a graceful shutdown
