@@ -15,6 +15,8 @@ To build **Stash** from source:
 
 ### Configuration
 
+You can configure **Stash** both using the config file or by using environment variables. **Please note that environment variables override values specified in the config.**
+
 #### Sample Config File
 
 ```yml
