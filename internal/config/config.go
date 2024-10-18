@@ -2,10 +2,11 @@ package config
 
 import (
 	"flag"
-	"github.com/ilyakaznacheev/cleanenv"
 	"log/slog"
 	"os"
 	"time"
+
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 var (
@@ -32,7 +33,7 @@ type Config struct {
 }
 
 // TODO: add description for config fields
-// see github.com/ilyakaznacheev/cleaner?tab=readme-ov-file#description
+// see github.com/ilyakaznacheev/cleanenv
 
 // GRPCConfig holds the configuration settings for the gRPC server.
 //
