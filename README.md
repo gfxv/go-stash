@@ -9,7 +9,7 @@ To build **Stash** from source:
 1) If not installed, install **go 1.22 or newer** on your machine. You can get **go** from [the official website](https://go.dev/doc/install).
 2) If not installed, install **Taskfile**. You can get **Taskfile** from [the official website](https://taskfile.dev/installation/).
 3) Clone this repo: `git clone https://github.com/gfxv/go-stash.git`
-4) In the `go-stash` directory run `task build`, which will result in a binary file named `stash`.
+4) In the `go-stash` directory run `task build`, which will result in a binary file named `stash` in `bin` directory.
 
 ## Usage
 
@@ -18,6 +18,8 @@ To build **Stash** from source:
 ### Configuration
 
 You can configure **Stash** both using the config file or by using environment variables. **Please note that environment variables override values specified in the config.**
+
+The process works as follows: it parses the YML file, checks environment variables to override file values, and if neither is found, it uses the default value.
 
 #### Sample Config File
 
