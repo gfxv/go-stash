@@ -4,13 +4,14 @@ vars:
   PROTO_SRC: ./proto
   PROTO_DEST: ./api
   BIN_DEST: ./bin
+  BUILD_FLAGS: -ldflags="-s -w" -trimpath
 
 tasks:
   build:
     desc: "Build project into a binary"
     silent: true
     cmds:
-      - go build -o {{.BIN_DEST}}/stash ./cmd/server/main.go
+      - go build {{.BUILD_FLAGS}} -o {{.BIN_DEST}}/stash ./cmd/server/main.go
 
   clean:
     desc: "Removes {{.BIN_DEST}} direcotry"
