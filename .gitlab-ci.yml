@@ -1,0 +1,66 @@
+stages:
+  - test
+  - build-artifact
+  - build-image
+  - post-test
+
+sast:
+  stage: test
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/SAST-IaC.latest.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Container-Scanning.gitlab-ci.yml
+
+build-artifact:
+  stage: build-artifact
+  image: golang:latest
+  script:
+    - go build -o stash ./cmd/server/main.go
+  artifacts:
+    name: "stash-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA"
+    expire_in: 1 week
+    paths:
+      - stash
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      changes:
+        - "*.go"
+        - .gitlab-ci.yml
+        - Dockerfile
+
+build-docker-image:
+  stage: build-image
+  needs:
+    - job: build-artifact
+      artifacts: true
+  image: docker.io/library/docker:20-git
+  script:
+    - docker build --no-cache -t $CI_REGISTRY_IMAGE/server:$(cat VERSION) -t $CI_REGISTRY_IMAGE/server:latest .
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker image push --all-tags $CI_REGISTRY_IMAGE/server
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      changes:
+        - "*.go"
+        - .gitlab-ci.yml
+        - Dockerfile
+
+container_scanning:
+  stage: post-test
+  needs:
+    - build-docker-image
+  variables:
+    CS_DISABLE_DEPENDENCY_LIST: "true"
+    CS_DEFAULT_BRANCH_IMAGE: $CI_REGISTRY_IMAGE/server:latest
+    CI_APPLICATION_REPOSITORY: $CI_REGISTRY_IMAGE/server
+    CI_APPLICATION_TAG: "latest"
+    CS_DISABLE_LANGUAGE_VULNERABILITY_SCAN: "false"
+    CS_ANALYZER_IMAGE: "registry.gitlab.com/security-products/container-scanning/grype:5"
+    SECURE_LOG_LEVEL: "debug"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      changes:
+        - "*.go"
+        - .gitlab-ci.yml
+        - Dockerfile
