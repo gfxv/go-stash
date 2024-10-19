@@ -77,6 +77,33 @@ Several launch parameters are available:
 
 **Please note:** Launch arguments override both config and environment variables.
 
+#### Docker
+
+You can build a Docker container with **Stash** by using the supplied `Dockerfile` and .`gitlab-ci.yml`. Environment variables can be used to configure the container. See example `docker-compose.yml` below.
+
+```yml
+services:
+  stash-app:
+    user: "1000"
+    image: go-stash/server:latest
+    environment:
+      - STASH_ENV=dev
+      - STASH_PORT=5555
+      - STASH_TIMEOUT=10s
+      - STASH_HEALTH_CHECK_INTERVAL=10s
+      - STASH_SYNC_NODE=
+      - STASH_NODES=
+      - STASH_PATH=/data/storage/
+      - STASH_REPLICATION_FACTOR=0
+      - STASH_ALLOW_SERVER_SIDE_COMPRESSION=false
+      - STASH_COMPRESSION_LEVEL=0
+      - CONFIG_PATH=/data/config.yml
+    ports:
+      - '5555:5555'
+    volumes:
+      - /srv/data/stash:/data
+```
+
 ### API (gRPC)
 
 For more information, please see `./proto/stash.proto`.
