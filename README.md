@@ -104,6 +104,8 @@ services:
       - /srv/data/stash:/data
 ```
 
+You can also find pre-built Docker images [here](https://gitlab.internal.rferee.dev/builds/docker-go-stash/container_registry/56) or use the latest version: `docker-registry.internal.rferee.dev/builds/docker-go-stash/server:latest`.
+
 ### API (gRPC)
 
 For more information, please see `./proto/stash.proto`.
